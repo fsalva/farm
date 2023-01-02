@@ -10,7 +10,6 @@ LIBDIR=lib
 CFLAGS=-Wall 
 
 all: $(BIN)
-	$(BIN)
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS)-c $< -o $@

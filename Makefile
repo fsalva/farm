@@ -7,7 +7,7 @@ OBJ=obj
 BIN=bin
 
 LIBDIR=lib
-CFLAGS=-Wall
+CFLAGS=-Wall -lpthread 
 
 
 all: $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   

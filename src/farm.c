@@ -50,33 +50,20 @@ int main(int argc, char * const argv[])
     }
 
     // Duplica il processo
-    int pid_master = fork();
+    int pid_child = fork();
 
     // Se sei il figlio, fai partire il processo Master-Worker
-    if (pid_master == 0) {
+    if (pid_child == 0) {
         execl("bin/master", "Master", NULL);
     }
-    else {
-        
-        // Duplica nuovamente
-        int pid_collector = fork(); 
-
-        // Fa partire il processo Collctor
-        if(pid_collector == 0) {
-            execl("bin/collector", "Collector", NULL);
-        }
-        
-    }
-
+    
     int status = 0; int wpid; 
 
     while ((wpid = wait(&status)) > 0)
     {
-        printf("Exit status of %d was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
+        printf("Exit status of %d (Master-Worker) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
             (status > 0) ? "accept" : "reject");
     }
-
-    fprintf(stderr, "Sono uscito, stronzi\n");
 
     free(dirname);
 

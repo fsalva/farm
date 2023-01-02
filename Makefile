@@ -7,12 +7,12 @@ OBJ=obj/farm.o
 BIN=./bin/farm
 
 LIBDIR=lib
-CFLAGS=-Wall 
+CFLAGS=-Wall
 
 all: $(BIN)
 
 obj/%.o: src/%.c
-	$(CC) $(CFLAGS)-c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $@

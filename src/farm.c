@@ -2,6 +2,9 @@
 #include <unistd.h> 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 
 int main(int argc, char * const argv[])
 {
@@ -43,10 +46,38 @@ int main(int argc, char * const argv[])
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
     if(optind < argc) {
         while(optind < argc)
-            fprintf(stderr, "Argomento non opzionale: %s\n", argv[optind++]);
-            
+            fprintf(stderr, "Argomento non opzionale: %s\n", argv[optind++]);            
     }
-    
+
+    // Duplica il processo
+    int pid_master = fork();
+
+    // Se sei il figlio, fai partire il processo Master-Worker
+    if (pid_master == 0) {
+        execl("bin/master", "Master", NULL);
+    }
+    else {
+        
+        // Duplica nuovamente
+        int pid_collector = fork(); 
+
+        // Fa partire il processo Collctor
+        if(pid_collector == 0) {
+            execl("bin/collector", "Collector", NULL);
+        }
+        
+    }
+
+    int status = 0; int wpid; 
+
+    while ((wpid = wait(&status)) > 0)
+    {
+        printf("Exit status of %d was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
+            (status > 0) ? "accept" : "reject");
+    }
+
+    fprintf(stderr, "Sono uscito, stronzi\n");
+
     free(dirname);
 
     return 0;

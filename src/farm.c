@@ -26,9 +26,9 @@ int main(int argc, char * const argv[])
                 break;
 
             case 'd':
-                dirname = malloc(sizeof(char) * (strlen(optarg) + 1));
+                dirname = malloc(strlen(optarg) + 1);
                 strncpy(dirname, optarg, strlen(optarg));
-                fprintf(stderr, "Dirname: %s\n", dirname);
+                fprintf(stderr, "Dirname: %s\n", optarg);
                 break;
             case 't':
                 delay = atoi(optarg);
@@ -47,6 +47,7 @@ int main(int argc, char * const argv[])
             
     }
     
+    free(dirname);
 
     return 0;
 }

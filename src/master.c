@@ -13,7 +13,6 @@
 #include <pthread.h>
 #include <errno.h>
 
-
 #define SOCK_PATH "tmp/farm.sck"
 
 bool running = true;
@@ -21,23 +20,23 @@ bool running = true;
 static pthread_mutex_t lock;
 static pthread_cond_t cond;
 
-static void * 
-thread_function(void *abs_t) {
+static void * thread_function(void *abs_t) {
+
     struct timespec *abs = (struct timespec *) abs_t;
+    
     pthread_cond_init(&cond, NULL);
     pthread_mutex_init(&lock, NULL);
-
     pthread_mutex_lock(&lock);
+
     pthread_cond_timedwait(&cond, &lock, abs);
     running = false;
     pthread_mutex_unlock(&lock);
+    
     return NULL;
 }  
 
 int main(int argc, char * const argv[])
-{
-    printf("[%s] Mio padre: %d\n", argv[0], getppid());
-    
+{    
     int opt; 
 
     // Argomenti opzionali inizializzati con valori default:
@@ -111,7 +110,7 @@ int main(int argc, char * const argv[])
     
     time_to_stop.tv_sec = now.tv_sec + 5;      // Ci aggiunge un timeout specificato da abstime. 
     time_to_stop.tv_nsec = now.tv_usec * 1000;
-   
+
     // Crea un thread che esegue la thread function (attende 5 secondi una lock). 
     // time_to_stop è il parametro della funzione.
     // Alla scadenza setta running = false.
@@ -126,6 +125,8 @@ int main(int argc, char * const argv[])
             // Tentativo di connessione:
             if((connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0)){
                 
+                fprintf(stderr, "Connessione in corso...! \n");
+
                 // Aspetta per "msec" millisecondi, poi riprova.
                 usleep(1000);
             }
@@ -133,6 +134,7 @@ int main(int argc, char * const argv[])
             {
                 // è connesso.
                 pthread_cond_signal(&cond);
+                fprintf(stderr, "[Master --> Collector] Connesso! \n");
             //  pthread_join(timeout_thread, NULL);
                 break;
             }
@@ -143,15 +145,17 @@ int main(int argc, char * const argv[])
         errno = ETIME;
     }
 
-
-
-
     // Send data to the server and read the response
     char buf[1024] = "Hello, server!";
-    write(sockfd, buf, 14);
-    sleep(1);
+    
+    write(sockfd, buf, sizeof(buf));
+    fprintf(stderr, "[Master] Sent to server: %s\n", buf);
+    
+
+
     int n = read(sockfd, buf, 1024);
-    printf("Received from server: %s\n", buf);
+    fprintf(stderr, "[Master] Received: %s\n", buf);
+
 
     // Close the socket
     close(sockfd);

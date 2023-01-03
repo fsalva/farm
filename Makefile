@@ -31,7 +31,7 @@ $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
 
 clean:
-	rm -r bin/* obj/*
+	rm -r bin/* obj/* tmp/*
 
 push:
 	git add .

@@ -9,21 +9,26 @@ BIN=bin
 LIBDIR=lib
 CFLAGS=-Wall -lpthread 
 
+LIBPATH = -l./lib/include/
+ARTIPATH = -L./lib/
 
-all: clean $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
+ARTIFACT = lib/lib.a 
 
-obj/%.o: src/%.c
+all: clean $(ARTIFACT) $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
+
+
+obj/%.o: src/%.c $(ARTIFACT)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BIN)/farm: $(OBJ)/farm.o
+$(BIN)/farm: $(OBJ)/farm.o $(ARTIFACT)
 	$(CC) $(CFLAGS) $(OBJ)/farm.o -o $@ 
 
 
-$(BIN)/master: $(OBJ)/master.o
-	$(CC) $(CFLAGS) $(OBJ)/master.o -o $@ 
+$(BIN)/master: $(OBJ)/master.o $(ARTIFACT)
+	$(CC) $(CFLAGS) $(OBJ)/master.o  -o $@ $(ARTIFACT)
 
 
-$(BIN)/collector: $(OBJ)/collector.o
+$(BIN)/collector: $(OBJ)/collector.o $(ARTIFACT) 
 	$(CC) $(CFLAGS) $(OBJ)/collector.o -o $@ 
 
 
@@ -31,12 +36,18 @@ $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
 
 clean:
-	- rm -r bin/* obj/* tmp/*
+	- rm -r bin/* obj/* tmp/* lib/obj/* lib/*.a
 
 push:
 	git add .
 	git commit -m "$(COMMIT)"
 	git push origin
+
+$(ARTIFACT) : $(LIBDIR)/$(SRC)/*
+	@for f in $^; do $(CC) $(CFLAGS) -c $${f} ;  done
+	@for f in $(shell ls ${LIBDIR}/${SRC}); do mv $${f%%.*}.o $(LIBDIR)/$(OBJ) ; done
+	-ar -rvs $(ARTIFACT) $(LIBDIR)/$(OBJ)/*
+
 
 valgrind: 
 	- make clean 

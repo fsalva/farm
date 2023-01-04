@@ -14,6 +14,9 @@
 #include <pthread.h>
 #include <errno.h>
 
+#include "../lib/include/files.h"
+#include "../lib/include/queue.h"
+
 #define SOCK_PATH "tmp/farm.sck"  
 
 void *              thread_function( void __attribute((unused)) * arg);
@@ -27,9 +30,9 @@ int main(int argc, char * const argv[])
     pthread_t * threadpool;
 
     // Argomenti opzionali inizializzati con valori default:
-    int nthread = 4;
-    int qlen = 8;
-    int delay = 0; 
+    int nthread = -1;
+    int qlen = -1;
+    int delay = -1; 
     char * dirname = NULL;
 
     while((opt = getopt(argc, argv, "n:q:d:t:")) != -1) {   //TODO: #3 Controllare il numero degli argomenti, deve essere > 3 se -d non è settata.
@@ -47,7 +50,9 @@ int main(int argc, char * const argv[])
             case 'd':
                 dirname = malloc(strlen(optarg) + 1);
                 strncpy(dirname, optarg, strlen(optarg));
-                fprintf(stderr, "Dirname: %s\n", optarg);
+                
+                write_files_recursively(NULL, dirname, 6);
+
                 break;
 
             case 't':
@@ -57,9 +62,20 @@ int main(int argc, char * const argv[])
 
             default:
                 fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [-d dirname] [-t time delay]\n", argv[0]);
-                break;
+                exit(1);
         }
     }
+
+    if(nthread == -1 ) nthread = 4;
+    if(qlen    == -1 ) qlen = 8;
+    if(delay   == -1 ) delay = 0;
+    if(dirname == NULL) {
+        if(argc - optind <= 0) {
+            fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [filename1, filename2, ..., filenameN] [-t time delay]\n", argv[0]);
+            exit(1);
+        }
+    } 
+
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
     if(optind < argc) {
         while(optind < argc)

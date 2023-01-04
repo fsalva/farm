@@ -4,3 +4,4 @@ obj/
 bin/
 vgcore.*
 .vscode/
+.a

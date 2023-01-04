@@ -50,8 +50,11 @@ int main(int argc, char * const argv[])
             case 'd':
                 dirname = malloc(strlen(optarg) + 1);
                 strncpy(dirname, optarg, strlen(optarg));
+                    perror("-d");
                 
                 write_files_recursively(NULL, dirname, 6);
+                
+                perror("-d");
 
                 break;
 

@@ -11,6 +11,12 @@
 void write_files_recursively(char *filename, char * dirname, long nfiles)
 {
     DIR *tp = opendir(dirname);
+    
+    if(tp == NULL) {
+        perror("Directory: ");
+        return;
+    }
+
     struct dirent* pt;
     struct stat st;
 
@@ -37,7 +43,10 @@ void write_files_recursively(char *filename, char * dirname, long nfiles)
         strcat(path, pt->d_name);
 		
         // Errore :
-        if (!(lstat(path, &st)>=0)) continue;
+        if (!(lstat(path, &st)>=0)) {
+            perror("lstat:");
+            continue;
+        }
 		
         // E' una directory :
         if (S_ISDIR(st.st_mode)) {

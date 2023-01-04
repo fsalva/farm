@@ -13,31 +13,17 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define SOCK_PATH "tmp/farm.sck"
+#define SOCK_PATH "tmp/farm.sck"  
 
-bool running = true;
-
-static pthread_mutex_t lock;
-static pthread_cond_t cond;
-
-static void * thread_function(void *abs_t) {
-
-    struct timespec *abs = (struct timespec *) abs_t;
-    
-    pthread_cond_init(&cond, NULL);
-    pthread_mutex_init(&lock, NULL);
-    pthread_mutex_lock(&lock);
-
-    pthread_cond_timedwait(&cond, &lock, abs);
-    running = false;
-    pthread_mutex_unlock(&lock);
-    
-    return NULL;
-}  
+void *              thread_function( void __attribute((unused)) * arg);
 
 int main(int argc, char * const argv[])
 {    
     int opt; 
+
+    char * test = malloc(sizeof(char) * 10);
+
+    pthread_t * threadpool;
 
     // Argomenti opzionali inizializzati con valori default:
     int nthread = 4;
@@ -62,11 +48,12 @@ int main(int argc, char * const argv[])
                 strncpy(dirname, optarg, strlen(optarg));
                 fprintf(stderr, "Dirname: %s\n", optarg);
                 break;
+
             case 't':
                 delay = atoi(optarg);
                 fprintf(stderr, "Delay (msec): %d\n", delay);
                 break;
-            
+
             default:
                 fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [-d dirname] [-t time delay]\n", argv[0]);
                 break;
@@ -91,74 +78,15 @@ int main(int argc, char * const argv[])
 
     ///////////////
 
-     // Create the socket
-    int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-
-    struct sockaddr_un server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, SOCK_PATH);
-    
-    pthread_t           timeout_thread;
-    
-
-    struct timeval      now;
-    struct timespec     time_to_stop;
-
-
-    gettimeofday(&now, NULL);                               // Prende il tempo 'attuale'
-    
-    time_to_stop.tv_sec = now.tv_sec + 5;      // Ci aggiunge un timeout specificato da abstime. 
-    time_to_stop.tv_nsec = now.tv_usec * 1000;
-
-    // Crea un thread che esegue la thread function (attende 5 secondi una lock). 
-    // time_to_stop è il parametro della funzione.
-    // Alla scadenza setta running = false.
-    
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, 1);
-    
-    if(0 == pthread_create(&timeout_thread, &attr, &thread_function, (void *) &time_to_stop)) {
-        while(running)
-        {   
-            // Tentativo di connessione:
-            if((connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0)){
-                
-                fprintf(stderr, "Connessione in corso...! \n");
-
-                // Aspetta per "msec" millisecondi, poi riprova.
-                usleep(1000);
-            }
-            else
-            {
-                // è connesso.
-                pthread_cond_signal(&cond);
-                fprintf(stderr, "[Master --> Collector] Connesso! \n");
-            //  pthread_join(timeout_thread, NULL);
-                break;
-            }
-            
-        }
+     // Crea i vari thread. 
+    threadpool = malloc(sizeof(pthread_t)* nthread);
+ 
+    for(int i = 0; i < nthread; i++)
+    {
+        pthread_create(&threadpool[i], NULL, thread_function,NULL);
         
-        pthread_attr_destroy(&attr);
-        errno = ETIME;
     }
-
-    // Send data to the server and read the response
-    char buf[1024] = "Hello, server!";
     
-    write(sockfd, buf, sizeof(buf));
-    fprintf(stderr, "[Master] Sent to server: %s\n", buf);
-    
-
-
-    int n = read(sockfd, buf, 1024);
-    fprintf(stderr, "[Master] Received: %s\n", buf);
-
-
-    // Close the socket
-    close(sockfd);
 
     while ((wpid = wait(&status)) > 0)
     {
@@ -172,4 +100,39 @@ int main(int argc, char * const argv[])
     free(dirname);
 
     exit(0);
+}
+
+
+void * thread_function( void __attribute((unused)) * arg){
+
+    // Create the socket
+    int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    if(sockfd == -1) perror("Socket: ");
+
+    struct sockaddr_un server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strcpy(server_addr.sun_path, SOCK_PATH);
+
+    while(connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
+        sleep(0.1);
+    }
+
+    while(1) {
+        send(sockfd, "Hey!", 4, 0);
+        char message[100];
+
+        if(recv(sockfd, message, 100, 0) < 0) {
+            perror("Recv: ");
+            return NULL;
+        }
+
+        fprintf(stderr, "[Worker]: %s\n", message);
+        close(sockfd);
+
+        break;
+    }
+
+    return NULL;
 }

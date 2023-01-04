@@ -21,11 +21,10 @@ void* handle_client(void* arg) {
     // Read data from the client socket and write it back
     char buf[1024];
     int n = read(client_sockfd, buf, 1024);
-    fprintf(stderr, "[Server] %d \n", n);
-    write(client_sockfd, buf, n);
+    sprintf(buf, "Grazie, %d \n", client_sockfd);
+    write(client_sockfd, buf, sizeof(buf));
 
-    // Close the client socket
-    close(client_sockfd);
+
     return NULL;
 }
 
@@ -80,7 +79,7 @@ static void run_server () {
                     if(fd == fd_sk) { // Accetta connessione
                         fd_c = accept(fd, NULL, 0);
 
-                        fprintf(stderr, "[Server] Accettato una connessione. \n");
+                        fprintf(stderr, "[Server] Accettato una connessione (fd = %d). \n", fd_c);
 
                         FD_SET(fd_c, &set);
 
@@ -93,6 +92,7 @@ static void run_server () {
                         //OPERAZIONI
                         handle_client((void *) &fd_c);
 
+                        close(fd_c);
                         
                         FD_CLR(fd, &set);
                     }
@@ -123,6 +123,5 @@ int main(int argc, char * const argv[])
     
     unlink(SOCK_PATH);
 
-    printf("[%s] Mio padre: %d\n", argv[0], getppid());
     exit(11);
 }

@@ -38,4 +38,9 @@ push:
 	git commit -m "$(COMMIT)"
 	git push origin
 
-.PHONY: all clean push
+valgrind: 
+	- make clean 
+	- make all
+	valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes bin/farm
+
+.PHONY: all clean push valgrind

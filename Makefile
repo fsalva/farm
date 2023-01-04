@@ -10,7 +10,7 @@ LIBDIR=lib
 CFLAGS=-Wall -lpthread 
 
 
-all: $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
+all: clean $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -31,7 +31,7 @@ $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
 
 clean:
-	rm -r bin/* obj/* tmp/*
+	- rm -r bin/* obj/* tmp/*
 
 push:
 	git add .

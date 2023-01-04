@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/syscall.h>
 
 #include <pthread.h>
 #include <errno.h>
@@ -83,8 +84,12 @@ int main(int argc, char * const argv[])
  
     for(int i = 0; i < nthread; i++)
     {
-        pthread_create(&threadpool[i], NULL, thread_function,NULL);
+        pthread_create(&threadpool[i], NULL, thread_function, &i);
         
+    }
+
+    for (int i = 0; i < nthread; i++) {
+        pthread_join(threadpool[i], NULL);
     }
     
 
@@ -102,37 +107,33 @@ int main(int argc, char * const argv[])
     exit(0);
 }
 
-
-void * thread_function( void __attribute((unused)) * arg){
-
+void* thread_function(void* arg) {
     // Create the socket
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 
-    if(sockfd == -1) perror("Socket: ");
+    int mytid = syscall(__NR_gettid);
 
+    // Set up the server address structure
     struct sockaddr_un server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, SOCK_PATH);
 
-    while(connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1){
-        sleep(0.1);
+    // Connect to the server
+    while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+        continue;
     }
 
-    while(1) {
-        send(sockfd, "Hey!", 4, 0);
-        char message[100];
 
-        if(recv(sockfd, message, 100, 0) < 0) {
-            perror("Recv: ");
-            return NULL;
-        }
+    // Send data to the server and read the response
+    char buf[1024] = "Hello, server!";
 
-        fprintf(stderr, "[Worker]: %s\n", message);
-        close(sockfd);
+    sprintf(buf, "[Thread %d] Hello, server! ", mytid); 
+    
+    write(sockfd, buf, sizeof(buf));
+    int n = read(sockfd, buf, 1024);
+    printf("Received from server: %s\n", buf);
 
-        break;
-    }
-
+    // Close the socket
+    close(sockfd);
     return NULL;
 }

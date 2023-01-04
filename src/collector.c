@@ -14,19 +14,6 @@
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 
-void* handle_client(void* arg) {
-    // Convert the void* pointer to an int
-    int client_sockfd = *((int*)arg);
-
-    // Read data from the client socket and write it back
-    char buf[1024];
-    int n = read(client_sockfd, buf, 1024);
-    sprintf(buf, "Grazie, %d \n", client_sockfd);
-    write(client_sockfd, buf, sizeof(buf));
-
-
-    return NULL;
-}
 
 static void run_server () {
     int fd_sk, fd_c, max_sockets = 0, fd; 
@@ -65,11 +52,12 @@ static void run_server () {
 
     while (1) {
 
+        FD_ZERO(&rdset);
+
         rdset = set;
 
         if( select(max_sockets + 1, &rdset, NULL, NULL, NULL) == -1) {
-            perror("Select: ");
-            break;
+            continue;
         }
         else {
             for ( fd = 0; fd <= max_sockets + 1; fd++) {
@@ -77,6 +65,7 @@ static void run_server () {
                 if(FD_ISSET(fd, &rdset)) {
                     
                     if(fd == fd_sk) { // Accetta connessione
+                        
                         fd_c = accept(fd, NULL, 0);
 
                         fprintf(stderr, "[Server] Accettato una connessione (fd = %d). \n", fd_c);
@@ -87,12 +76,14 @@ static void run_server () {
                     }
                     else { // Pronto in lettura: 
                         
-                        fprintf(stderr, "Client pronto in lettura\n");
-
                         //OPERAZIONI
-                        handle_client((void *) &fd_c);
+                        int n = read(fd, buf, 1024);
 
-                        close(fd_c);
+                        char _str[2048];
+                        
+                        write(fd, buf, sizeof(buf));
+
+                        close(fd);
                         
                         FD_CLR(fd, &set);
                     }

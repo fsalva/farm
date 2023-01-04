@@ -30,7 +30,7 @@ void write_files_recursively(char *filename, char * dirname, long nfiles)
 
     if(nfiles == 0) nfiles = INT_MAX;
 
-    while((pt = readdir(tp))!=NULL && nfiles > 0) 
+    while((pt = readdir(tp))!=NULL && nfiles >= 0) 
 	{
         // . o ..
 		if (!strcmp(pt->d_name, ".")||!strcmp(pt->d_name, "..")) continue;
@@ -58,6 +58,7 @@ void write_files_recursively(char *filename, char * dirname, long nfiles)
         else if (S_ISREG(st.st_mode)) {
             
             fprintf(stderr, "File trovato: [%s] \n", path);
+
             
         }
     }

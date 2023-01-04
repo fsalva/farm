@@ -1,15 +1,28 @@
-typedef struct node {
-    int val;
-    struct node * next;
-} node_t;
+#ifndef QUEUE_H
+#define QUEUE_H
 
 
-void enqueue(node_t ** head, int val);
+#include "files.h"
 
-void pushQ(node_t ** head, int val);
 
-int isEmptyQ(node_t * head);
+/**
+ * @brief Rappresenta una coda di files.
+ * 
+ */
+typedef struct queue
+{
+    diskfile * file;
+    struct queue * next;
 
-int dequeue(node_t ** head);
+} queue;
 
-void print_queue(node_t ** head);
+/***/
+int enqueue( queue ** head, char * filename);
+
+void pushQ( queue ** head, int val);
+
+int isEmptyQ( queue * head);
+
+diskfile * dequeue(queue ** head);
+
+#endif

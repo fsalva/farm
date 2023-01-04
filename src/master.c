@@ -15,19 +15,23 @@
 #include <errno.h>
 
 #include "../lib/include/files.h"
-#include "../lib/include/queue.h"
+#include "../lib/include/concurrentqueue.h"
 
 #define SOCK_PATH "tmp/farm.sck"  
 
-void *              thread_function( void __attribute((unused)) * arg);
+void *  workers_function( void __attribute((unused)) * arg);
+void *  master_function ( void __attribute((unused)) * arg);
 
 int main(int argc, char * const argv[])
 {    
     int opt; 
 
+    concurrentQ cq;
+    pthread_mutex_init(&(cq.mutex) , NULL);
+
     char * test = malloc(sizeof(char) * 10);
 
-    pthread_t * threadpool;
+    pthread_t * workers;
 
     // Argomenti opzionali inizializzati con valori default:
     int nthread = -1;
@@ -70,13 +74,31 @@ int main(int argc, char * const argv[])
     }
 
     if(nthread == -1 ) nthread = 4;
+
+    // Creo Workers thread
+    
+    workers = malloc(sizeof(pthread_t) * nthread);
+ 
+    for(int i = 0; i < nthread; i++) {
+        pthread_create(&workers[i], NULL, workers_function, &i);
+    }
+
     if(qlen    == -1 ) qlen = 8;
+
+    // Istanzio coda
+
+
     if(delay   == -1 ) delay = 0;
+
+
     if(dirname == NULL) {
         if(argc - optind <= 0) {
             fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [filename1, filename2, ..., filenameN] [-t time delay]\n", argv[0]);
             exit(1);
         }
+    }
+    else {
+        fprintf(stderr, "Directory non NULL, invio i file ai WORKERS\n");
     } 
 
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
@@ -98,19 +120,9 @@ int main(int argc, char * const argv[])
 
     ///////////////
 
-     // Crea i vari thread. 
-    threadpool = malloc(sizeof(pthread_t)* nthread);
- 
-    for(int i = 0; i < nthread; i++)
-    {
-        pthread_create(&threadpool[i], NULL, thread_function, &i);
-        
-    }
-
     for (int i = 0; i < nthread; i++) {
-        pthread_join(threadpool[i], NULL);
+        pthread_join(workers[i], NULL);
     }
-    
 
     while ((wpid = wait(&status)) > 0)
     {
@@ -126,7 +138,7 @@ int main(int argc, char * const argv[])
     exit(0);
 }
 
-void* thread_function(void* arg) {
+void* workers_function(void* arg) {
     // Create the socket
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 

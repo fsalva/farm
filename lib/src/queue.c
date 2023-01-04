@@ -1,40 +1,44 @@
+
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "../include/queue.h"
 
-void print_queue(node_t ** head){
-   node_t * curr = * head;
 
-    while (curr != NULL)
-    {
-        fprintf(stderr, "%d", curr->val);
-        curr = curr->next;
-    }
-}
+int enqueue(queue ** head, char * filename) {
 
-void enqueue(node_t ** head, int val) {
-    node_t *new_node = malloc(sizeof(node_t));
-    if (!new_node) return;
+    queue * new_node = malloc(sizeof(queue));
+    if (!new_node) return -1;
 
-    new_node->val = val;
+    new_node->file->path =  malloc(sizeof(char) * strlen(filename));
+
+    strncpy(new_node->file->path, filename, strlen(filename));
     new_node->next = *head;
 
     *head = new_node;
+
+    return 0;
 }
 
-int dequeue(node_t ** head) {
-    node_t *current, *prev = NULL;
-    int retval = -1;
+diskfile * dequeue(queue ** head) {
 
-    if (*head == NULL) return -1;
+    queue * current, * prev = NULL;
+    
+    diskfile * retval = NULL;
 
-    current = *head;
+    if (* head == NULL) return NULL;
+
+    current = * head;
+
     while (current->next != NULL) {
         prev = current;
         current = current->next;
     }
 
-    retval = current->val;
+    retval->path = malloc(sizeof(char) * strlen(current->file->path));
+    strncpy(retval->path, current->file->path, strlen(current->file->path)); 
+    
     free(current);
 
     if (prev)
@@ -45,22 +49,7 @@ int dequeue(node_t ** head) {
     return retval;
 }
 
-int isEmptyQ(node_t * head) {
+int isEmptyQ(queue * head) {
     return head == NULL ? 1 : 0;
 }
 
-
-//insert link at the first location 
-void pushQ(node_t ** head, int val) {
-   //create a link
-    node_t *link = ( node_t*) malloc(sizeof(node_t));
-	//
-    link->val = val;
-	
-   //point it to old first elem
-    link->next = * head;
-	
-   //point first to new first elem
-   * head = link;
-
-}

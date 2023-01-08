@@ -10,24 +10,27 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/syscall.h>
+#include <dirent.h>
 
 #include <pthread.h>
 #include <errno.h>
 
-#include "../lib/include/files.h"
 #include "../lib/include/concurrentqueue.h"
 
 #define SOCK_PATH "tmp/farm.sck"  
 
 void *  workers_function( void __attribute((unused)) * arg);
 void *  master_function ( void __attribute((unused)) * arg);
+void read_files_rec(char * dirname, queue * q);
+
+queue feed_queue;
+
 
 int main(int argc, char * const argv[])
 {    
     int opt; 
 
     concurrentQ cq;
-    pthread_mutex_init(&(cq.mutex) , NULL);
 
     char * test = malloc(sizeof(char) * 10);
 
@@ -38,6 +41,11 @@ int main(int argc, char * const argv[])
     int qlen = -1;
     int delay = -1; 
     char * dirname = NULL;
+
+
+    queue_init(&feed_queue);
+    
+
 
     while((opt = getopt(argc, argv, "n:q:d:t:")) != -1) {   //TODO: #3 Controllare il numero degli argomenti, deve essere > 3 se -d non è settata.
         switch (opt) {
@@ -56,7 +64,7 @@ int main(int argc, char * const argv[])
                 strncpy(dirname, optarg, strlen(optarg));
                     perror("-d");
                 
-                write_files_recursively(NULL, dirname, 6);
+                read_files_rec(dirname,  &feed_queue);
                 
                 perror("-d");
 
@@ -107,6 +115,7 @@ int main(int argc, char * const argv[])
             fprintf(stderr, "Argomento non opzionale: %s\n", argv[optind++]);            
     }
 
+
     int pid_child = fork();
 
      // Duplica il processo
@@ -120,9 +129,12 @@ int main(int argc, char * const argv[])
 
     ///////////////
 
+    queue_print(&feed_queue);
+
     for (int i = 0; i < nthread; i++) {
         pthread_join(workers[i], NULL);
     }
+
 
     while ((wpid = wait(&status)) > 0)
     {
@@ -168,3 +180,33 @@ void* workers_function(void* arg) {
     close(sockfd);
     return NULL;
 }
+
+
+void read_files_rec(char * dirname, queue * q)
+{
+    DIR *dir;
+    struct dirent *entry;
+
+    if (!(dir = opendir(dirname)))
+        return;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_DIR) {
+            char path[1024];
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                continue;
+            snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
+
+            printf("[:)] Path: %s\n", path);
+
+            read_files_rec(path, q);
+        } else {
+
+            queue_enqueue(q, entry->d_name);
+            
+
+        }
+    }
+    closedir(dir);
+}
+

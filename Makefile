@@ -7,7 +7,7 @@ OBJ=obj
 BIN=bin
 
 LIBDIR=lib
-CFLAGS=-Wall -lpthread 
+CFLAGS=-Wall -g -lpthread 
 
 LIBPATH = -l./lib/include/
 ARTIPATH = -L./lib/

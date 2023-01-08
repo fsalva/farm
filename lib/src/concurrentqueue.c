@@ -1,14 +1,20 @@
 
 #include "../include/queue.h"
-#include "../include/files.h"
 #include "../include/concurrentqueue.h"
 
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+void initQ(concurrentQ * cq, int qlen) {
+    cq->q = NULL;
+    cq->capacity =  qlen;
+    cq->size = 0;
+    pthread_mutex_init(&(cq->mutex) , NULL);
 
-int enQ(concurrentQ cq, diskfile f) {
+}
+
+int enQ(concurrentQ cq, char * f) {
     
     int retval;
 
@@ -16,7 +22,7 @@ int enQ(concurrentQ cq, diskfile f) {
 
     pthread_mutex_lock(&(cq.mutex));
     
-    retval = enqueue(&(cq.q), f.path);
+    retval = queue_enqueue((cq.q), f);
 
     if(retval >= 0) cq.size++;
 
@@ -25,15 +31,15 @@ int enQ(concurrentQ cq, diskfile f) {
     return retval;
 } 
 
-diskfile * deQ(concurrentQ cq) {
+char * deQ(concurrentQ cq) {
     
-    diskfile * retval;
+    char * retval;
 
     if(cq.size == 0) return NULL;
 
     pthread_mutex_lock(&(cq.mutex));
     
-    retval = dequeue(&(cq.q));
+    retval = queue_dequeue((cq.q));
 
     if(retval != NULL) cq.size--;
 

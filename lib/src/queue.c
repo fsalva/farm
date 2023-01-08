@@ -1,55 +1,74 @@
 
+#ifndef MYQUEUE_H
+#define MYQUEUE_H
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <pthread.h>
+
 #include "../include/queue.h"
 
 
-int enqueue(queue ** head, char * filename) {
+void queue_init(queue *q) {
+    q->head = NULL;
+    q->tail = NULL;
+}
 
-    queue * new_node = malloc(sizeof(queue));
-    if (!new_node) return -1;
+// Enqueues a new element at the end of the queue
+int queue_enqueue(queue *q, char *value) {
 
-    new_node->file->path =  malloc(sizeof(char) * strlen(filename));
+    queue_node *node = calloc( 1, sizeof(queue_node));
 
-    strncpy(new_node->file->path, filename, strlen(filename));
-    new_node->next = *head;
+    node->value = calloc(strlen(value) + 1, sizeof(char));
+    if(!node->value) return -1;
 
-    *head = new_node;
+    node->value = strdup(value);
+    node->next = NULL;
+
+    if (q->tail == NULL) {
+        // The queue is empty
+        q->head = node;
+        q->tail = node;
+    } else {
+        // Add the element to the end of the queue
+        q->tail->next = node;
+        q->tail = node;
+    }
 
     return 0;
 }
 
-diskfile * dequeue(queue ** head) {
-
-    queue * current, * prev = NULL;
-    
-    diskfile * retval = NULL;
-
-    if (* head == NULL) return NULL;
-
-    current = * head;
-
-    while (current->next != NULL) {
-        prev = current;
-        current = current->next;
+char *queue_dequeue(queue *q) {
+    if (q->head == NULL) {
+        // The queue is empty
+        return NULL;
     }
 
-    retval->path = malloc(sizeof(char) * strlen(current->file->path));
-    strncpy(retval->path, current->file->path, strlen(current->file->path)); 
-    
-    free(current);
+    queue_node *node = q->head;
+    q->head = node->next;
+    if (q->head == NULL) {
+        // The queue is now empty
+        q->tail = NULL;
+    }
 
-    if (prev)
-        prev->next = NULL;
-    else
-        *head = NULL;
-
-    return retval;
+    char *value = node->value;
+    free(node);
+    return value;
 }
+
 
 int isEmptyQ(queue * head) {
     return head == NULL ? 1 : 0;
 }
 
+void queue_print(queue *q) {
+    queue_node *node = q->head;
+    while (node != NULL) {
+        printf("%s ", node->value);
+        node = node->next;
+    }
+    printf("\n");
+}
+
+#endif

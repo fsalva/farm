@@ -3,7 +3,6 @@
 
 
 #include "./queue.h"
-#include "./files.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -26,9 +25,11 @@ typedef struct {
 
 } concurrentQ;
 
-int enQ(concurrentQ cq, diskfile d);
+void initQ(concurrentQ * cq, int qlen);
 
-diskfile * deQ(concurrentQ cq);
+int enQ(concurrentQ cq, char * fname);
+
+char * deQ(concurrentQ cq);
 
 int isEmpty(concurrentQ cq);
 

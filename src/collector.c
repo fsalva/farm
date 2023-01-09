@@ -14,14 +14,48 @@
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 
+typedef struct {
+    int res;
+    char * filename;
+
+    fileAndResult * next;
+
+} fileAndResult;
+
+
+
+int compare_elements(fileAndResult * a, fileAndResult * b) {
+    return a->res > b->res ?  1 : a->res == b->res ? 0 : -1;
+}
+
+void insert_sorted( fileAndResult * list, size_t len) {
+
+    for (size_t i = 1; i < len; i++) {
+        
+        fileAndResult temp = list[i];
+        
+        size_t j = i;
+        
+        while (j > 0 && compare_elements(&temp, &list[j - 1]) < 0) {
+            list[j] = list[j - 1];
+            j--;
+        }
+        
+        list[j] = temp;
+  }
+}
 
 static void run_server () {
     int fd_sk, fd_c, max_sockets = 0, fd; 
     int nread; 
 
+    fileAndResult * list;
+    int llen = 0;
+
     char buf[1024];
 
     fd_set set, rdset;
+
 
     struct sockaddr_un psa;
     memset(&psa, 0, sizeof(psa));

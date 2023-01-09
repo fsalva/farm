@@ -89,18 +89,16 @@ int main(int argc, char * const argv[])
     workers = malloc(sizeof(pthread_t) * nthread);
  
     for(int i = 0; i < nthread; i++) {
-        pthread_create(&workers[i], NULL, workers_function, &feed_queue);
+        pthread_create(&workers[i], NULL, workers_function, &feed_queue); // TODO: #4 Creare thread master 
     }
 
     if(qlen    == -1 ) qlen = 8;
 
-    // Istanzio coda
+    // Istanzio coda    
     queue_init(&feed_queue, qlen);
 
 
     if(delay   == -1 ) delay = 0;
-
-
 
 
 

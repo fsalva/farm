@@ -53,8 +53,10 @@ int queue_enqueue(queue *q, char *value) {
         q->tail = node;
     }
 
+
     q->size++;
 
+    fprintf(stderr, "Dimensione coda: [%d / %d]\n", q->size, q->capacity);
 
     pthread_cond_signal(&q->nemptyCond);
 

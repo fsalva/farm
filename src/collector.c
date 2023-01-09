@@ -68,8 +68,6 @@ static void run_server () {
                         
                         fd_c = accept(fd, NULL, 0);
 
-                        fprintf(stderr, "[Server] Accettato una connessione (fd = %d). \n", fd_c);
-
                         FD_SET(fd_c, &set);
 
                         if(fd_c > max_sockets) max_sockets = fd_c;
@@ -79,9 +77,13 @@ static void run_server () {
                         //OPERAZIONI
                         int n = read(fd, buf, 1024);
 
-                        char _str[2048];
+                        char * restOfTheString = NULL;
+                        long receivedLong = strtol(buf, &restOfTheString, 10);
                         
-                        write(fd, buf, sizeof(buf));
+                        restOfTheString = strtok(strdup(restOfTheString), "\t");
+
+                        fprintf(stderr, "[%ld][%s]\n", receivedLong, restOfTheString);
+
 
                         close(fd);
                         

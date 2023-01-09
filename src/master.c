@@ -22,12 +22,9 @@
 
 void *  workers_function( void __attribute((unused)) * arg);
 void *  master_function ( void __attribute((unused)) * arg);
-void read_files_rec(char * dirname, queue * q, int delay);
-long sum_longs_from_file(const char *filename);
+void    read_files_rec(char * dirname, queue * q, int delay);
+long    sum_longs_from_file(const char *filename);
 
-
-pthread_cond_t cond_var = PTHREAD_COND_INITIALIZER;
-pthread_cond_t dequeued = PTHREAD_COND_INITIALIZER;
 
 int main(int argc, char * const argv[])
 {    
@@ -39,7 +36,6 @@ int main(int argc, char * const argv[])
     if (pid_child == 0) {
         execl("bin/collector", "Collector", NULL);
     }
-
 
     int opt; 
     
@@ -54,8 +50,6 @@ int main(int argc, char * const argv[])
     int qlen = -1;
     int delay = -1; 
     char * dirname = NULL;
-
-    
 
 
     while((opt = getopt(argc, argv, "n:q:d:t:")) != -1) {   //TODO: #3 Controllare il numero degli argomenti, deve essere > 3 se -d non è settata.
@@ -101,11 +95,11 @@ int main(int argc, char * const argv[])
     if(qlen    == -1 ) qlen = 8;
 
     // Istanzio coda
+    queue_init(&feed_queue, qlen);
 
 
     if(delay   == -1 ) delay = 0;
 
-    queue_init(&feed_queue, qlen);
 
 
 
@@ -122,8 +116,7 @@ int main(int argc, char * const argv[])
         } 
     }
     else {
-        
-        sleep(1);
+
         read_files_rec(dirname, &feed_queue, delay);
 
     } 
@@ -175,8 +168,6 @@ void* workers_function(void* arg) {
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, SOCK_PATH);
 
-    
-
     // Connect to the server
     while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         continue;
@@ -187,13 +178,18 @@ void* workers_function(void* arg) {
     while (1)  
     {   
         char * filename; 
+        int sum;
 
         filename = queue_dequeue(q);
 
-        sum_longs_from_file(filename);
-        //fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
+        sum = sum_longs_from_file(filename);
+        fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
         
-        usleep(200000);
+        char buf[1024];
+
+        snprintf(buf, sizeof(buf), "%d\t%s", sum, filename);
+
+        write(sockfd, buf, sizeof(buf));
 
     }
     // Close the socket
@@ -234,7 +230,6 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
             usleep(1000 * delay);
 
-            fprintf(stderr, "Dimensione coda: [%d / %d]\n", q->size, q->capacity);
             //fprintf(stderr, "\r                          ");
             }
             

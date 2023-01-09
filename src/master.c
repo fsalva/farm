@@ -23,14 +23,14 @@ void *  workers_function( void __attribute((unused)) * arg);
 void *  master_function ( void __attribute((unused)) * arg);
 void read_files_rec(char * dirname, queue * q);
 
-queue feed_queue;
+pthread_cond_t cond_var = PTHREAD_COND_INITIALIZER;;
 
 
 int main(int argc, char * const argv[])
 {    
     int opt; 
-
-    concurrentQ cq;
+    
+    queue feed_queue;
 
     char * test = malloc(sizeof(char) * 10);
 
@@ -42,8 +42,6 @@ int main(int argc, char * const argv[])
     int delay = -1; 
     char * dirname = NULL;
 
-
-    queue_init(&feed_queue);
     
 
 
@@ -62,12 +60,7 @@ int main(int argc, char * const argv[])
             case 'd':
                 dirname = malloc(strlen(optarg) + 1);
                 strncpy(dirname, optarg, strlen(optarg));
-                    perror("-d");
-                
-                read_files_rec(dirname,  &feed_queue);
-                
-                perror("-d");
-
+                    
                 break;
 
             case 't':
@@ -84,11 +77,12 @@ int main(int argc, char * const argv[])
     if(nthread == -1 ) nthread = 4;
 
     // Creo Workers thread
-    
+
+
     workers = malloc(sizeof(pthread_t) * nthread);
  
     for(int i = 0; i < nthread; i++) {
-        pthread_create(&workers[i], NULL, workers_function, &i);
+        pthread_create(&workers[i], NULL, workers_function, &feed_queue);
     }
 
     if(qlen    == -1 ) qlen = 8;
@@ -98,15 +92,24 @@ int main(int argc, char * const argv[])
 
     if(delay   == -1 ) delay = 0;
 
+    queue_init(&feed_queue, qlen);
+
 
     if(dirname == NULL) {
         if(argc - optind <= 0) {
             fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [filename1, filename2, ..., filenameN] [-t time delay]\n", argv[0]);
             exit(1);
         }
+
+        else {
+            // Gestione altri file
+
+        } 
     }
     else {
-        fprintf(stderr, "Directory non NULL, invio i file ai WORKERS\n");
+        
+        read_files_rec(dirname, &feed_queue);
+
     } 
 
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
@@ -129,7 +132,6 @@ int main(int argc, char * const argv[])
 
     ///////////////
 
-    queue_print(&feed_queue);
 
     for (int i = 0; i < nthread; i++) {
         pthread_join(workers[i], NULL);
@@ -151,6 +153,9 @@ int main(int argc, char * const argv[])
 }
 
 void* workers_function(void* arg) {
+
+
+
     // Create the socket
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 
@@ -161,29 +166,59 @@ void* workers_function(void* arg) {
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, SOCK_PATH);
 
+
+
     // Connect to the server
     while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         continue;
+        fprintf(stderr, "NEL L'ALTRO LOOP");
     }
 
+            fprintf(stderr, "Connesso..");
 
-    // Send data to the server and read the response
-    char buf[1024] = "Hello, server!";
 
-    sprintf(buf, "[Thread %d] Hello, server! ", mytid); 
-    
-    write(sockfd, buf, sizeof(buf));
-    int n = read(sockfd, buf, 1024);
-    printf("Received from server: %s\n", buf);
+    queue * q = (queue * ) arg;
 
+    while (1)  
+    {   
+        
+        char * filename; // -- numero fd socket
+
+        // Acquisisco la lock.
+        pthread_mutex_lock(&(q->mutex));
+        
+        fprintf(stderr, "NEL LOOP");
+
+        //Se non c'è lavoro da fare mi metto in attesa.
+        if((filename = queue_dequeue(q)) == NULL){
+            
+            fprintf(stderr, "Non c'è nulla... mi metto in attesa..");
+
+            // E attendo un segnale per essere risvegliato, rilasciando la lock. 
+
+            pthread_cond_wait(&cond_var, &(q->mutex));
+
+            // Quando viene svegliato deve prendere il primo task disponibile:            
+            filename = queue_dequeue(q);
+
+            //fprintf(stderr, "[Thread] Ho ottenuto %s \n", filename);
+        } 
+        // Mollo la lock sulla coda.
+
+        fprintf(stderr, "[Thread] Ho ottenuto %s \n", filename);
+
+
+
+        pthread_mutex_unlock(&(q->mutex)); 
+
+    }
     // Close the socket
     close(sockfd);
     return NULL;
 }
 
 
-void read_files_rec(char * dirname, queue * q)
-{
+void read_files_rec(char * dirname, queue * q) {
     DIR *dir;
     struct dirent *entry;
 
@@ -193,20 +228,32 @@ void read_files_rec(char * dirname, queue * q)
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_DIR) {
             char path[1024];
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-                continue;
+
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+
             snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
 
-            printf("[:)] Path: %s\n", path);
-
             read_files_rec(path, q);
-        } else {
+
+        } 
+        else {
+            pthread_mutex_lock(&(q->mutex));            //-- Ottengo la lock sulla coda
 
             queue_enqueue(q, entry->d_name);
-            
 
+               
+
+            pthread_cond_signal(&(cond_var));    //-- Segnalo ad un thread l'arrivo di un task
+
+
+            pthread_mutex_unlock(&(q->mutex));
         }
     }
+
     closedir(dir);
+    
+
 }
+    
+
 

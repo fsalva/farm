@@ -10,13 +10,19 @@
 #include "../include/queue.h"
 
 
-void queue_init(queue *q) {
+void queue_init(queue *q, int capacity) {
+
+    q->capacity = capacity;
+    pthread_mutex_init(&(q->mutex), NULL);
+
     q->head = NULL;
     q->tail = NULL;
 }
 
 // Enqueues a new element at the end of the queue
 int queue_enqueue(queue *q, char *value) {
+
+    //pthread_mutex_lock(&(q->mutex));
 
     queue_node *node = calloc( 1, sizeof(queue_node));
 
@@ -36,10 +42,16 @@ int queue_enqueue(queue *q, char *value) {
         q->tail = node;
     }
 
+    //pthread_mutex_unlock(&(q->mutex));
+
+
     return 0;
 }
 
 char *queue_dequeue(queue *q) {
+
+    //pthread_mutex_lock(&(q->mutex));
+
     if (q->head == NULL) {
         // The queue is empty
         return NULL;
@@ -54,12 +66,24 @@ char *queue_dequeue(queue *q) {
 
     char *value = node->value;
     free(node);
+
+    //pthread_mutex_unlock(&(q->mutex));
+
+
     return value;
 }
 
 
 int isEmptyQ(queue * head) {
-    return head == NULL ? 1 : 0;
+
+    //pthread_mutex_lock(&(head->mutex));
+
+    int retval = head == NULL ? 1 : 0;
+
+    //pthread_mutex_unlock(&(head->mutex));
+
+
+    return retval;
 }
 
 void queue_print(queue *q) {

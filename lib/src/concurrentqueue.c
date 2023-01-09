@@ -7,7 +7,8 @@
 #include <stdlib.h>
 
 void initQ(concurrentQ * cq, int qlen) {
-    cq->q = NULL;
+
+    queue_init(cq->q, qlen);
     cq->capacity =  qlen;
     cq->size = 0;
     pthread_mutex_init(&(cq->mutex) , NULL);

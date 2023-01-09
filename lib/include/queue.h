@@ -18,7 +18,10 @@ typedef struct queue {
 
     int size;
     int capacity;
+
     pthread_mutex_t mutex;
+    pthread_cond_t nemptyCond;
+    pthread_cond_t nfullCond;
 
 } queue;
 

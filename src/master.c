@@ -11,6 +11,7 @@
 #include <sys/time.h>
 #include <sys/syscall.h>
 #include <dirent.h>
+#include <limits.h>
 
 #include <pthread.h>
 #include <errno.h>
@@ -21,13 +22,25 @@
 
 void *  workers_function( void __attribute((unused)) * arg);
 void *  master_function ( void __attribute((unused)) * arg);
-void read_files_rec(char * dirname, queue * q);
+void read_files_rec(char * dirname, queue * q, int delay);
+long sum_longs_from_file(const char *filename);
 
-pthread_cond_t cond_var = PTHREAD_COND_INITIALIZER;;
 
+pthread_cond_t cond_var = PTHREAD_COND_INITIALIZER;
+pthread_cond_t dequeued = PTHREAD_COND_INITIALIZER;
 
 int main(int argc, char * const argv[])
 {    
+    int pid_child = fork();
+
+     // Duplica il processo
+
+    // Se sei il figlio, fai partire il processo Master-Worker
+    if (pid_child == 0) {
+        execl("bin/collector", "Collector", NULL);
+    }
+
+
     int opt; 
     
     queue feed_queue;
@@ -95,6 +108,8 @@ int main(int argc, char * const argv[])
     queue_init(&feed_queue, qlen);
 
 
+
+
     if(dirname == NULL) {
         if(argc - optind <= 0) {
             fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [filename1, filename2, ..., filenameN] [-t time delay]\n", argv[0]);
@@ -108,7 +123,8 @@ int main(int argc, char * const argv[])
     }
     else {
         
-        read_files_rec(dirname, &feed_queue);
+        sleep(1);
+        read_files_rec(dirname, &feed_queue, delay);
 
     } 
 
@@ -119,14 +135,7 @@ int main(int argc, char * const argv[])
     }
 
 
-    int pid_child = fork();
-
-     // Duplica il processo
-
-    // Se sei il figlio, fai partire il processo Master-Worker
-    if (pid_child == 0) {
-        execl("bin/collector", "Collector", NULL);
-    }
+    
 
     int status = 0; int wpid; 
 
@@ -154,7 +163,7 @@ int main(int argc, char * const argv[])
 
 void* workers_function(void* arg) {
 
-
+    FILE * f;
 
     // Create the socket
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -166,89 +175,70 @@ void* workers_function(void* arg) {
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, SOCK_PATH);
 
-
+    
 
     // Connect to the server
     while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         continue;
-        fprintf(stderr, "NEL L'ALTRO LOOP");
     }
-
-            fprintf(stderr, "Connesso..");
-
 
     queue * q = (queue * ) arg;
 
     while (1)  
     {   
+        char * filename; 
+
+        filename = queue_dequeue(q);
+
+        sum_longs_from_file(filename);
+        //fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
         
-        char * filename; // -- numero fd socket
-
-        // Acquisisco la lock.
-        pthread_mutex_lock(&(q->mutex));
-        
-        fprintf(stderr, "NEL LOOP");
-
-        //Se non c'è lavoro da fare mi metto in attesa.
-        if((filename = queue_dequeue(q)) == NULL){
-            
-            fprintf(stderr, "Non c'è nulla... mi metto in attesa..");
-
-            // E attendo un segnale per essere risvegliato, rilasciando la lock. 
-
-            pthread_cond_wait(&cond_var, &(q->mutex));
-
-            // Quando viene svegliato deve prendere il primo task disponibile:            
-            filename = queue_dequeue(q);
-
-            //fprintf(stderr, "[Thread] Ho ottenuto %s \n", filename);
-        } 
-        // Mollo la lock sulla coda.
-
-        fprintf(stderr, "[Thread] Ho ottenuto %s \n", filename);
-
-
-
-        pthread_mutex_unlock(&(q->mutex)); 
+        usleep(200000);
 
     }
     // Close the socket
     close(sockfd);
+
     return NULL;
 }
 
 
-void read_files_rec(char * dirname, queue * q) {
+void read_files_rec(char * dirname, queue * q, int delay) {
+
     DIR *dir;
     struct dirent *entry;
+    char path[1024];
+    char parentD[1024];
 
     if (!(dir = opendir(dirname)))
         return;
 
     while ((entry = readdir(dir)) != NULL) {
+
         if (entry->d_type == DT_DIR) {
-            char path[1024];
 
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
             snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
 
-            read_files_rec(path, q);
+            read_files_rec(path, q, delay);
 
         } 
         else {
-            pthread_mutex_lock(&(q->mutex));            //-- Ottengo la lock sulla coda
 
-            queue_enqueue(q, entry->d_name);
+            char fullpath[1024];
 
-               
+            snprintf(fullpath, sizeof(fullpath), "%s\/%s", dirname, entry->d_name);
+            
+            queue_enqueue(q, fullpath);
 
-            pthread_cond_signal(&(cond_var));    //-- Segnalo ad un thread l'arrivo di un task
+            usleep(1000 * delay);
 
-
-            pthread_mutex_unlock(&(q->mutex));
+            fprintf(stderr, "Dimensione coda: [%d / %d]\n", q->size, q->capacity);
+            //fprintf(stderr, "\r                          ");
+            }
+            
         }
-    }
 
     closedir(dir);
     
@@ -257,3 +247,38 @@ void read_files_rec(char * dirname, queue * q) {
     
 
 
+long sum_longs_from_file(const char *filename) {
+    FILE *fp = fopen(filename, "r");
+
+    //fprintf(stderr, "Filename: %s\n", filename);
+
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 0;
+    }
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    long sum = 0;
+    errno = 0;
+    int index = 0;
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        char *endptr;
+        long value = strtol(line, &endptr, 10);
+        if (errno == ERANGE && (value == LONG_MAX || value == LONG_MIN)) {
+        perror("Error parsing long value");
+        break;
+        }
+        if (line == endptr) {
+        fprintf(stderr, "No digits found in line\n");
+        } else {
+        sum += (value * index++);
+        }
+    }
+    free(line);
+    fclose(fp);
+
+    return sum;
+}

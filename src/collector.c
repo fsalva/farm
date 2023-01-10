@@ -21,11 +21,11 @@
 typedef struct file
 {
     char * filename;
-    int result;
+    long result;
 
 } file;
 
-int compare_elements(file * a, file * b) {
+long compare_elements(file * a, file * b) {
     return a->result > b->result ?  1 : a->result == b->result ? 0 : -1;
 }
 
@@ -40,7 +40,7 @@ typedef struct tree
     tree * t = NULL;
 
 
-file * createFile(char * filename, int res) {
+file * createFile(char * filename, long res) {
 
     file * f = (file *) calloc(1, sizeof(file));
 
@@ -85,7 +85,7 @@ void printTree(tree * root) {
 
     if(root != NULL) {
         printTree(root->left);
-        fprintf(stderr, "%d\t%s\n", (root->f)->result, root->f->filename);
+        fprintf(stderr, "%ld\t%s\n", (root->f)->result, root->f->filename);
         printTree(root->right);
 
     }

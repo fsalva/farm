@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/un.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <stdbool.h>
 #include <time.h>
@@ -39,8 +40,6 @@ int main(int argc, char * const argv[])
     int opt; 
     
     queue feed_queue;
-
-    char * test = malloc(sizeof(char) * 10);
 
     pthread_t * workers;
 
@@ -115,8 +114,7 @@ int main(int argc, char * const argv[])
     else {
 
         read_files_rec(dirname, &feed_queue, delay);
-
-    } 
+    }   
 
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
     if(optind < argc) {
@@ -136,6 +134,7 @@ int main(int argc, char * const argv[])
         pthread_join(workers[i], NULL);
     }
 
+    free(workers);
 
     while ((wpid = wait(&status)) > 0)
     {
@@ -246,36 +245,27 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
 
 long sum_longs_from_file(const char *filename) {
-    FILE *fp = fopen(filename, "r");
 
-    if (fp == NULL) {
-        perror("Error opening file");
-        return 0;
-    }
-
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
+    int fd;
+    long number;
     long sum = 0;
-    errno = 0;
-    int index = 0;
+    int i = 0;
+    ssize_t bytes_read;
 
-    while ((read = getline(&line, &len, fp)) != -1) {
-        char *endptr;
-        long value = strtol(line, &endptr, 10);
-        if (errno == ERANGE && (value == LONG_MAX || value == LONG_MIN)) {
-        perror("Error parsing long value");
-        break;
-        }
-        if (line == endptr) {
-        fprintf(stderr, "No digits found in line\n");
-        } else {
-        sum += (value * index++);
-        }
+    fd = open(filename, O_RDONLY); // open the file for reading
+    if (fd < 0) {
+        printf("Error opening file!\n");
+        return -1;
     }
 
-    free(line);
-    fclose(fp);
+    while ((bytes_read = read(fd, &number, sizeof(long))) == sizeof(long)) {
+        sum += number * i;
+        i++;
+    }
 
+    fprintf(stderr, "SUM: %ld", sum);
+
+    close(fd); // close the file
     return sum;
+
 }

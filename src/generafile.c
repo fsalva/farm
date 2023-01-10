@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   long *p = mmap(NULL, nelem*sizeof(long), PROT_READ | PROT_WRITE,
-		 MAP_SHARED, fd, 0);
+		MAP_SHARED, fd, 0);
   close(fd);
   if (p == MAP_FAILED) {
     perror("mmap");

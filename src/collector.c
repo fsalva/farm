@@ -2,11 +2,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/select.h>
+
 
 #define SOCK_PATH "tmp/farm.sck"
 #define MAXCONN 100
@@ -14,48 +16,108 @@
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 
-typedef struct {
-    int res;
+
+
+typedef struct file
+{
     char * filename;
+    int result;
 
-    fileAndResult * next;
+} file;
 
-} fileAndResult;
-
-
-
-int compare_elements(fileAndResult * a, fileAndResult * b) {
-    return a->res > b->res ?  1 : a->res == b->res ? 0 : -1;
+int compare_elements(file * a, file * b) {
+    return a->result > b->result ?  1 : a->result == b->result ? 0 : -1;
 }
 
-void insert_sorted( fileAndResult * list, size_t len) {
+typedef struct tree
+{
+    file * f;
+    struct tree * left;
+    struct tree * right;
 
-    for (size_t i = 1; i < len; i++) {
+} tree;
+
+    tree * t = NULL;
+
+
+file * createFile(char * filename, int res) {
+
+    file * f = (file *) calloc(1, sizeof(file));
+
+    f->filename = strdup(filename);
+    f->result = res;
+
+    return f;
+}
+
+
+
+tree * addChild(tree * root, file * f) {
+
+    if(root == NULL) {
         
-        fileAndResult temp = list[i];
-        
-        size_t j = i;
-        
-        while (j > 0 && compare_elements(&temp, &list[j - 1]) < 0) {
-            list[j] = list[j - 1];
-            j--;
+        root = malloc(sizeof(tree));
+
+        root->f= createFile(f->filename, f->result);
+
+        root->left = NULL;
+    
+        root->right = NULL;
+
+    }
+    else {
+    
+        if(compare_elements(root->f, f) > 0 ){
+
+            root->left = addChild(root->left, f);
         }
+        else{ 
+            root->right = addChild(root->right, f);
+        } 
+
+    }
         
-        list[j] = temp;
-  }
+    return root;
+
 }
+
+void printTree(tree * root) {
+
+    if(root != NULL) {
+        printTree(root->left);
+        fprintf(stderr, "%d\t%s\n", (root->f)->result, root->f->filename);
+        printTree(root->right);
+
+    }
+    
+
+
+}
+
+
+
+void sig_handler(int signum){
+
+    printf("\nInside handler function\n");
+    
+    printTree(t);
+
+    fflush(stdout);
+    unlink(SOCK_PATH);
+    exit(11);
+    
+}
+
 
 static void run_server () {
-    int fd_sk, fd_c, max_sockets = 0, fd; 
-    int nread; 
 
-    fileAndResult * list;
-    int llen = 0;
+    int fd_sk, fd_c, max_sockets = 0, fd; 
+    
+    int nread; 
 
     char buf[1024];
 
-    fd_set set, rdset;
-
+    fd_set current_sockets, ready_sockets;
 
     struct sockaddr_un psa;
     memset(&psa, 0, sizeof(psa));
@@ -64,7 +126,7 @@ static void run_server () {
 
 
     fd_sk = socket(AF_UNIX, SOCK_STREAM, 0);
-    
+    unlink(SOCK_PATH);
     if(fd_sk < 0) {
         perror("Socket:");
     }
@@ -75,55 +137,72 @@ static void run_server () {
 
     listen(fd_sk, MAXCONN);
 
-    fprintf(stderr, "[Server] Creata socket, pronta! \n");
-
-
-
-    FD_ZERO(&set);
-    FD_SET(fd_sk, &set);
+    
 
     max_sockets = fd_sk;
+    FD_ZERO(&current_sockets);
+    FD_SET(fd_sk, &current_sockets);
 
     while (1) {
 
-        FD_ZERO(&rdset);
 
-        rdset = set;
+        ready_sockets = current_sockets;
 
-        if( select(max_sockets + 1, &rdset, NULL, NULL, NULL) == -1) {
-            continue;
+        if( select(max_sockets + 1, &ready_sockets, NULL, NULL, NULL) < 0) {
+            perror("Select: ");
+        
+            unlink(SOCK_PATH);
+            exit(EXIT_FAILURE);
         }
-        else {
-            for ( fd = 0; fd <= max_sockets + 1; fd++) {
 
-                if(FD_ISSET(fd, &rdset)) {
+
+        else {
+            for ( fd = 0; fd < max_sockets + 1; fd++) {
+
+
+                if(FD_ISSET(fd, &ready_sockets)) {
                     
-                    if(fd == fd_sk) { // Accetta connessione
+                    // Caso 1: Nuova connessione in arrivo: 
+                    if(fd == fd_sk) { 
                         
                         fd_c = accept(fd, NULL, 0);
 
-                        FD_SET(fd_c, &set);
+                        FD_SET(fd_c, &current_sockets);
 
                         if(fd_c > max_sockets) max_sockets = fd_c;
                     }
-                    else { // Pronto in lettura: 
-                        
-                        //OPERAZIONI
-                        int n = read(fd, buf, 1024);
+                    
+                    // Caso 2: Pronto in lettura: 
+                    else { 
 
-                        char * restOfTheString = NULL;
-                        long receivedLong = strtol(buf, &restOfTheString, 10);
-                        
-                        restOfTheString = strtok(strdup(restOfTheString), "\t");
+                        read(fd, buf, 1024);
 
-                        fprintf(stderr, "[%ld][%s]\n", receivedLong, restOfTheString);
+                        //fprintf(stderr, buf);
+                        
+                        char * restOfTheString;
+                        long receivedLong;
+
+                        receivedLong = strtol(buf, &restOfTheString, 10);
+
+                        file * f = createFile(restOfTheString, receivedLong);
+                        
+                        t = addChild(t, f);
+
+                        //fprintf(stderr, ">>>>>>[%ld][%s]\n", receivedLong, restOfTheString);
+
+
+                        //createFile(restOfTheString, receivedLong);
+                        
+                        write(fd, "Ok", sizeof("Ok"));
+
+                        FD_CLR(fd, &current_sockets);
 
 
                         close(fd);
-                        
-                        FD_CLR(fd, &set);
+
                     }
                 }
+
             }
 
         } 
@@ -137,18 +216,11 @@ static void run_server () {
 int main(int argc, char * const argv[])
 {
 
+    signal(SIGINT, sig_handler);
+
     run_server();
-
-    // Select
-    fd_set rdset;
-
-    FD_ZERO(&rdset);
-
-    // Close the client socket
-
-    // Close the socket when finished
     
-    unlink(SOCK_PATH);
+    
 
     exit(11);
 }

@@ -6,8 +6,12 @@
 #include <sys/wait.h>
 
 
+
+
 int main(int argc, char * const argv[])
 {
+
+    
 
     // Duplica il processo
     int pid_child = fork();

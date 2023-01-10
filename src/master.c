@@ -16,7 +16,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "../lib/include/concurrentqueue.h"
+#include "../lib/include/queue.h"
 
 #define SOCK_PATH "tmp/farm.sck"  
 
@@ -24,7 +24,6 @@ void *  workers_function( void __attribute((unused)) * arg);
 void *  master_function ( void __attribute((unused)) * arg);
 void    read_files_rec(char * dirname, queue * q, int delay);
 long    sum_longs_from_file(const char *filename);
-
 
 int main(int argc, char * const argv[])
 {    
@@ -154,9 +153,13 @@ int main(int argc, char * const argv[])
 
 void* workers_function(void* arg) {
 
-    FILE * f;
+    
 
-    // Create the socket
+    queue * q = (queue * ) arg;
+
+    while (1)  
+    {      
+        // Create the socket
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 
     int mytid = syscall(__NR_gettid);
@@ -168,30 +171,33 @@ void* workers_function(void* arg) {
 
     // Connect to the server
     while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        continue;
+        sleep(0.1);
     }
 
-    queue * q = (queue * ) arg;
-
-    while (1)  
-    {   
         char * filename; 
-        int sum;
+        long sum;
 
         filename = queue_dequeue(q);
+        //fprintf(stderr, "[%ld] DEQUEUED il file %s \n", syscall(__NR_gettid), filename);
 
         sum = sum_longs_from_file(filename);
-        fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
+        //fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
         
         char buf[1024];
-
-        snprintf(buf, sizeof(buf), "%d\t%s", sum, filename);
+        
+        sprintf(buf, "%ld%s", sum, filename);
 
         write(sockfd, buf, sizeof(buf));
+        
 
-    }
+        read(sockfd, buf, 1024);
+        
+
     // Close the socket
-    close(sockfd);
+        close(sockfd);
+        
+    
+    }
 
     return NULL;
 }
@@ -222,13 +228,12 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
             char fullpath[1024];
 
-            snprintf(fullpath, sizeof(fullpath), "%s\/%s", dirname, entry->d_name);
+            snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
             
             queue_enqueue(q, fullpath);
 
             usleep(1000 * delay);
 
-            //fprintf(stderr, "\r                          ");
             }
             
         }
@@ -242,8 +247,6 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
 long sum_longs_from_file(const char *filename) {
     FILE *fp = fopen(filename, "r");
-
-    //fprintf(stderr, "Filename: %s\n", filename);
 
     if (fp == NULL) {
         perror("Error opening file");
@@ -270,6 +273,7 @@ long sum_longs_from_file(const char *filename) {
         sum += (value * index++);
         }
     }
+
     free(line);
     fclose(fp);
 

@@ -56,8 +56,7 @@ int queue_enqueue(queue *q, char *value) {
 
     q->size++;
 
-    fprintf(stderr, "Dimensione coda: [%d / %d]\n", q->size, q->capacity);
-
+    
     pthread_cond_signal(&q->nemptyCond);
 
     pthread_mutex_unlock(&q->mutex);
@@ -68,6 +67,8 @@ int queue_enqueue(queue *q, char *value) {
 char *queue_dequeue(queue *q) {
 
     pthread_mutex_lock(&(q->mutex));
+
+
 
     while(q->size == 0) {
         pthread_cond_wait(&q->nemptyCond, &q->mutex);
@@ -85,13 +86,11 @@ char *queue_dequeue(queue *q) {
     free(node);
 
     q->size--;
-    
-    fprintf(stderr, "Dimensione coda: [%d / %d]\n", q->size, q->capacity);
-
 
     pthread_cond_signal(&(q->nfullCond));
     
     pthread_mutex_unlock(&(q->mutex));
+
 
     return value;
 }

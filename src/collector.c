@@ -86,9 +86,9 @@ tree * addChild(tree * root, file * f) {
 void printTree(tree * root) {
 
     if(root != NULL) {
-        printTree(root->left);
+        if(root->left != NULL) printTree(root->left);
         fprintf(stderr, "%ld\t%s\n", (root->f)->result, root->f->filename);
-        printTree(root->right);
+        if(root->right != NULL) printTree(root->right);
 
     }
     
@@ -97,7 +97,9 @@ void printTree(tree * root) {
 }
 
 void sig_handler(int signum) {
-    printTree(t);
+    //printTree(t);
+
+    fprintf(stderr, "Stampo ordinatamente!\n");
 }
 
 void int_handler(int signum){
@@ -153,8 +155,12 @@ static void run_server () {
 
         if( select(max_sockets + 1, &ready_sockets, NULL, NULL, NULL) < 0) {
 
-            if(errno == EINTR) continue;
-
+            if(errno == EINTR) {
+                perror("Select: ");
+                continue;
+            } 
+            
+            
             perror("Select: ");
         
             unlink(SOCK_PATH);
@@ -242,7 +248,10 @@ int main(int argc, char * const argv[])
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR2, &sa, NULL);
 
-    fprintf(stderr, "Collector: %d", getpid());
+    signal(SIGPIPE, SIG_IGN);
+
+        fprintf(stderr, "Collector: %d\n", getpid());
+
 
     run_server();
     

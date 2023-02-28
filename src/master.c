@@ -36,13 +36,22 @@ void sigpipe_handler(int signum) {
 }
 
 void handler_sigusr1(int signum) {
-
-    kill(pid_child, SIGUSR2);
+    if(pid_child > 0)
+        kill(pid_child, SIGUSR2);
 }
 
 
 int main(int argc, char * const argv[])
 {    
+    struct sigaction sa; 
+
+    sa.sa_handler = &handler_sigusr1;
+
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &sa, NULL);
+
+    signal(SIGPIPE, sigpipe_handler);
+    
     pid_child = fork();
 
      // Duplica il processo
@@ -52,13 +61,6 @@ int main(int argc, char * const argv[])
         execl("bin/collector", "Collector", NULL);
     }
 
-    struct sigaction sa; 
-
-    sa.sa_handler = &handler_sigusr1;
-
-    sigaction(SIGUSR1, &sa, NULL);
-
-    signal(SIGPIPE, sigpipe_handler);
 
     fprintf(stderr, "Master: %d\n", getpid());
 
@@ -211,7 +213,6 @@ void* workers_function(void* arg) {
         long sum;
 
         filename = queue_dequeue(q);
-        fprintf(stderr, "[%ld] DEQUEUED il file %s \n", syscall(__NR_gettid), filename);
 
         if(strcmp(filename, QUIT) != 0) {
             sum = sum_longs_from_file(filename);
@@ -225,7 +226,6 @@ void* workers_function(void* arg) {
 
             if((checkv = write(sockfd, buf, sizeof(buf))) < 0) {
 
-                fprintf(stderr, "Sto bucchino non mi risponde! \n");
                 running = 0; 
                 break; 
             }

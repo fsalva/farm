@@ -52,6 +52,6 @@ $(ARTIFACT) : $(LIBDIR)/$(SRC)/*
 valgrind: 
 	- make clean 
 	- make all
-	valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes bin/farm
+	valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes bin/farm -d filetest
 
 .PHONY: all clean push valgrind

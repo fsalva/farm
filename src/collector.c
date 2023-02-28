@@ -3,12 +3,14 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/select.h>
 
+#include "../lib/include/msg.h"
 
 #define SOCK_PATH "tmp/farm.sck"
 #define MAXCONN 100
@@ -94,19 +96,20 @@ void printTree(tree * root) {
 
 }
 
-
-
-void sig_handler(int signum){
-
-    printf("\nInside handler function\n");
-    
+void sig_handler(int signum) {
     printTree(t);
+}
 
+void int_handler(int signum){
+
+    printf("[Collector]:  Ricevo SIGINT!\n");
     fflush(stdout);
     unlink(SOCK_PATH);
     exit(11);
     
 }
+
+
 
 
 static void run_server () {
@@ -149,6 +152,9 @@ static void run_server () {
         ready_sockets = current_sockets;
 
         if( select(max_sockets + 1, &ready_sockets, NULL, NULL, NULL) < 0) {
+
+            if(errno == EINTR) continue;
+
             perror("Select: ");
         
             unlink(SOCK_PATH);
@@ -216,7 +222,16 @@ static void run_server () {
 int main(int argc, char * const argv[])
 {
 
-    signal(SIGINT, sig_handler);
+    struct sigaction sa; 
+
+    sa.sa_handler = &sig_handler;
+
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR2, &sa, NULL);
+
+    signal(SIGINT, int_handler);
+
+    fprintf(stderr, "Collector: %d", getpid());
 
     run_server();
     

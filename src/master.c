@@ -18,17 +18,32 @@
 #include <errno.h>
 
 #include "../lib/include/queue.h"
+#include "../lib/include/msg.h"
 
 #define SOCK_PATH "tmp/farm.sck"  
+#define QUIT "QUIT"
+#define MAX_MSG_SIZE 276
 
 void *  workers_function( void __attribute((unused)) * arg);
 void *  master_function ( void __attribute((unused)) * arg);
 void    read_files_rec(char * dirname, queue * q, int delay);
 long    sum_longs_from_file(const char *filename);
 
+int pid_child = -1;
+
+void sigpipe_handler(int signum) {
+    fprintf(stderr, "Sigpipe ricevuto!\n");
+}
+
+void handler_sigusr1(int signum) {
+
+    kill(pid_child, SIGUSR2);
+}
+
+
 int main(int argc, char * const argv[])
 {    
-    int pid_child = fork();
+    pid_child = fork();
 
      // Duplica il processo
 
@@ -36,6 +51,17 @@ int main(int argc, char * const argv[])
     if (pid_child == 0) {
         execl("bin/collector", "Collector", NULL);
     }
+
+    struct sigaction sa; 
+
+    sa.sa_handler = &handler_sigusr1;
+
+    sigaction(SIGUSR1, &sa, NULL);
+
+    signal(SIGPIPE, sigpipe_handler);
+
+
+    fprintf(stderr, "Master: %d\n", getpid());
 
     int opt; 
     
@@ -123,25 +149,34 @@ int main(int argc, char * const argv[])
     }
 
 
-    
 
     int status = 0; int wpid; 
 
     ///////////////
 
-
-    for (int i = 0; i < nthread; i++) {
-        pthread_join(workers[i], NULL);
-    }
-
-    free(workers);
-
-    while ((wpid = wait(&status)) > 0)
+    while ((wpid = waitpid(pid_child, &status, 0)) > 0)
     {
         printf("Exit status of %d (Collector) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
             (status > 0) ? "accept" : "reject");
     }
 
+    fprintf(stderr, "Sending %d NULL tasks to threads ... \n", nthread);
+
+    for (int i = 0; i < nthread; i++) {
+        queue_enqueue(&feed_queue, QUIT);
+        sleep(0.1);
+    }
+
+    fprintf(stderr, "Waiting for threads ... \n");
+
+    for (int i = 0; i < nthread; i++) {
+        pthread_join(workers[i], NULL);
+
+    }
+
+    fprintf(stderr, "Threads joined ! \n");
+
+    free(workers);
 
 
 
@@ -152,11 +187,11 @@ int main(int argc, char * const argv[])
 
 void* workers_function(void* arg) {
 
-    
-
     queue * q = (queue * ) arg;
 
-    while (1)  
+    int running = 1;
+
+    while (running)  
     {      
         // Create the socket
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -177,20 +212,33 @@ void* workers_function(void* arg) {
         long sum;
 
         filename = queue_dequeue(q);
-        //fprintf(stderr, "[%ld] DEQUEUED il file %s \n", syscall(__NR_gettid), filename);
+        fprintf(stderr, "[%ld] DEQUEUED il file %s \n", syscall(__NR_gettid), filename);
 
-        sum = sum_longs_from_file(filename);
-        //fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
-        
-        char buf[1024];
-        
-        sprintf(buf, "%ld%s", sum, filename);
+        if(strcmp(filename, QUIT) != 0) {
+            sum = sum_longs_from_file(filename);
+            //fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
+            
+            char buf[MAX_MSG_SIZE];
+            
+            sprintf(buf, "%ld%s", sum, filename);
 
-        write(sockfd, buf, sizeof(buf));
-        
+            int checkv;
 
-        read(sockfd, buf, 1024);
-        
+            if((checkv = write(sockfd, buf, sizeof(buf))) < 0) {
+
+                fprintf(stderr, "Sto bucchino non mi risponde! \n");
+                running = 0; 
+                break; 
+            }
+            
+
+            read(sockfd, buf, MAX_MSG_SIZE);
+        }
+        else {
+            fprintf(stderr, "Thread %d: received quitting signal! \n", mytid);
+            running = 0;
+
+        }
 
     // Close the socket
         close(sockfd);
@@ -206,8 +254,7 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
     DIR *dir;
     struct dirent *entry;
-    char path[1024];
-    char parentD[1024];
+    char path[MAX_MSG_SIZE];
 
     if (!(dir = opendir(dirname)))
         return;
@@ -225,7 +272,7 @@ void read_files_rec(char * dirname, queue * q, int delay) {
         } 
         else {
 
-            char fullpath[1024];
+            char fullpath[MAX_MSG_SIZE];
 
             snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
             
@@ -263,7 +310,6 @@ long sum_longs_from_file(const char *filename) {
         i++;
     }
 
-    fprintf(stderr, "SUM: %ld", sum);
 
     close(fd); // close the file
     return sum;

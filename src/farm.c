@@ -23,7 +23,7 @@ int main(int argc, char * const argv[])
     
     int status = 0; int wpid; 
 
-    while ((wpid = wait(&status)) > 0)
+    while ((wpid = waitpid( pid_child, &status, 0)) > 0)
     {
         printf("Exit status of %d (Master-Worker) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
             (status > 0) ? "accept" : "reject");

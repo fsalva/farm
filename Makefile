@@ -29,7 +29,7 @@ $(BIN)/master: $(OBJ)/master.o $(ARTIFACT)
 
 
 $(BIN)/collector: $(OBJ)/collector.o $(ARTIFACT) 
-	$(CC) $(CFLAGS) $(OBJ)/collector.o -o $@ 
+	$(CC) $(CFLAGS) $(OBJ)/collector.o -o $@ $(ARTIFACT)
 
 
 $(BIN)/generafile: $(OBJ)/generafile.o

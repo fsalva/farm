@@ -64,7 +64,7 @@ int queue_enqueue(queue *q, char *value) {
     return 0;
 }
 
-char *queue_dequeue(queue *q) {
+char * queue_dequeue(queue *q) {
 
     pthread_mutex_lock(&(q->mutex));
 
@@ -93,6 +93,62 @@ char *queue_dequeue(queue *q) {
 
 
     return value;
+}
+
+char * queue_dequeue_async_unsafe(queue *q) {
+
+    if(q->size == 0) {
+        fprintf(stderr, "Ritorno nuLL");
+        return NULL;
+    }
+
+
+    queue_node *node = q->head;
+    q->head = node->next;
+    if (q->head == NULL) {
+        // The queue is now empty
+        q->tail = NULL;
+    }
+
+    char *value = node->value;
+    free(node);
+
+    q->size--;
+
+    return value;
+}
+
+int queue_enqueue_async_unsafe(queue *q, char *value) {
+
+
+    queue_node *node = calloc( 1, sizeof(queue_node));
+
+    
+
+    node->value = calloc(strlen(value) + 1, sizeof(char));
+    if(!node->value) return -1;
+
+    if(q->capacity - q->size == 0) {
+        return -1;
+    }
+
+    node->value = strdup(value);
+    node->next = NULL;
+
+    if (q->tail == NULL) {
+        // The queue is empty
+        q->head = node;
+        q->tail = node;
+    } else {
+        // Add the element to the end of the queue
+        q->tail->next = node;
+        q->tail = node;
+    }
+
+
+    q->size++;
+
+    return 0;
 }
 
 

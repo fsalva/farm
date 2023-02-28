@@ -30,9 +30,11 @@ void    read_files_rec(char * dirname, queue * q, int delay);
 long    sum_longs_from_file(const char *filename);
 
 int pid_child = -1;
+int running = 1;
+int master_running = 1;
+
 
 void sigpipe_handler(int signum) {
-    fprintf(stderr, "Sigpipe ricevuto!\n");
 }
 
 void handler_sigusr1(int signum) {
@@ -40,6 +42,12 @@ void handler_sigusr1(int signum) {
         kill(pid_child, SIGUSR2);
 }
 
+void sigint_handler(int signum) {
+    master_running = 0;
+}
+
+queue feed_queue;
+queue initial_queue;
 
 int main(int argc, char * const argv[])
 {    
@@ -50,11 +58,13 @@ int main(int argc, char * const argv[])
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &sa, NULL);
 
+    signal(SIGINT, sigint_handler);
+
     signal(SIGPIPE, sigpipe_handler);
     
-    pid_child = fork();
 
      // Duplica il processo
+    pid_child = fork();
 
     // Se sei il figlio, fai partire il processo Master-Worker
     if (pid_child == 0) {
@@ -66,8 +76,9 @@ int main(int argc, char * const argv[])
 
     int opt; 
     
-    queue feed_queue;
+    
 
+    pthread_t   master;
     pthread_t * workers;
 
     // Argomenti opzionali inizializzati con valori default:
@@ -106,26 +117,18 @@ int main(int argc, char * const argv[])
         }
     }
 
-    if(nthread == -1 ) nthread = 4;
-
-    // Creo Workers thread
-
-
-    workers = malloc(sizeof(pthread_t) * nthread);
- 
-    for(int i = 0; i < nthread; i++) {
-        pthread_create(&workers[i], NULL, workers_function, &feed_queue); // TODO: #4 Creare thread master 
-    }
-
     if(qlen    == -1 ) qlen = 8;
 
     // Istanzio coda    
     queue_init(&feed_queue, qlen);
+    
+    // Crea Master Thread
 
+
+
+    
 
     if(delay   == -1 ) delay = 0;
-
-
 
     if(dirname == NULL) {
         if(argc - optind <= 0) {
@@ -140,7 +143,8 @@ int main(int argc, char * const argv[])
     }
     else {
 
-        read_files_rec(dirname, &feed_queue, delay);
+        //read_files_rec(dirname, &initial_queue, delay);
+
     }   
 
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
@@ -155,31 +159,45 @@ int main(int argc, char * const argv[])
 
     ///////////////
 
+   
+
+
+
+    if(nthread == -1 ) nthread = 4;    
+
+    // Creo Workers thread
+
+    workers = malloc(sizeof(pthread_t) * nthread);
+
+
+
+
+    for(int i = 0; i < nthread; i++) {
+        pthread_create(&workers[i], NULL, workers_function, &feed_queue); 
+    }
+    
+    pthread_create(&master, NULL, master_function, &feed_queue);
+
+    for (int i = 0; i < nthread; i++) {
+        pthread_join(workers[i], NULL);
+
+    }
+    pthread_join(master, NULL);
+
+    fprintf(stderr, "Ok");
+
+
+    fprintf(stderr, "Threads joined ! \n");
+/*
     while ((wpid = waitpid(pid_child, &status, 0)) > 0)
     {
         printf("Exit status of %d (Collector) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
             (status > 0) ? "accept" : "reject");
     }
 
-    fprintf(stderr, "Sending %d NULL tasks to threads ... \n", nthread);
-
-    for (int i = 0; i < nthread; i++) {
-        queue_enqueue(&feed_queue, QUIT);
-        sleep(0.1);
-    }
-
-    fprintf(stderr, "Waiting for threads ... \n");
-
-    for (int i = 0; i < nthread; i++) {
-        pthread_join(workers[i], NULL);
-
-    }
-
-    fprintf(stderr, "Threads joined ! \n");
+*/
 
     free(workers);
-
-
 
     free(dirname);
 
@@ -190,61 +208,64 @@ void* workers_function(void* arg) {
 
     queue * q = (queue * ) arg;
 
-    int running = 1;
+    char buf[MAX_MSG_SIZE];
 
-    while (running)  
-    {      
-        // Create the socket
+    // Crea la socket.
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 
     int mytid = syscall(__NR_gettid);
 
-    // Set up the server address structure
+    // Set-up del server.
     struct sockaddr_un server_addr;
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, SOCK_PATH);
 
-    // Connect to the server
+    // Si connette - (Aspetta se il Collector non è pronto). 
     while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         sleep(0.1);
     }
 
+    while (running)  
+    {          
         char * filename; 
         long sum;
 
         filename = queue_dequeue(q);
 
+        fprintf(stderr, "Gioco con %s\n", filename);
+
+        memset(buf, 0, MAX_MSG_SIZE);
+
         if(strcmp(filename, QUIT) != 0) {
-            sum = sum_longs_from_file(filename);
-            //fprintf(stderr, "[%ld] Risultato: %ld\n", syscall(__NR_gettid),sum_longs_from_file(filename));
-            
-            char buf[MAX_MSG_SIZE];
+            sum = sum_longs_from_file(filename);            
             
             sprintf(buf, "%ld%s", sum, filename);
 
             int checkv;
 
-            if((checkv = write(sockfd, buf, sizeof(buf))) < 0) {
+            if((checkv = writen(sockfd, buf, MAX_MSG_SIZE)) < 0) {
 
                 running = 0; 
+                close(sockfd);
                 break; 
             }
             
+            //readn(sockfd, buf, MAX_MSG_SIZE);
 
-            read(sockfd, buf, MAX_MSG_SIZE);
         }
         else {
-            fprintf(stderr, "Thread %d: received quitting signal! \n", mytid);
+            sprintf(buf, "%d%s", -1, QUIT);
+            writen(sockfd, buf, MAX_MSG_SIZE);
             running = 0;
-
         }
 
-    // Close the socket
-        close(sockfd);
-        
-    
     }
 
+    fprintf(stderr, "Thread %d: quitting! \n", mytid);
+
+    // Chiude la socket.
+    close(sockfd);
+    
     return NULL;
 }
 
@@ -258,7 +279,7 @@ void read_files_rec(char * dirname, queue * q, int delay) {
     if (!(dir = opendir(dirname)))
         return;
 
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != NULL && master_running) {
 
         if (entry->d_type == DT_DIR) {
 
@@ -274,10 +295,10 @@ void read_files_rec(char * dirname, queue * q, int delay) {
             char fullpath[MAX_MSG_SIZE];
 
             snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
-            
-            queue_enqueue(q, fullpath);
-
             usleep(1000 * delay);
+
+            queue_enqueue(&feed_queue, fullpath);
+
 
             }
             
@@ -288,6 +309,27 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
 }
     
+void *  master_function ( void __attribute((unused)) * arg) {
+    
+    queue * q = (queue * ) arg;
+    char * filename;
+
+    queue_init(q, 8);
+
+    read_files_rec("filetest", q, 100);
+
+    while (master_running)
+    {
+        sleep(0.1);
+
+    }
+    
+    for (int i = 0; i < 4; i++) {
+        queue_enqueue(q, QUIT);
+    }
+
+    return NULL;
+}
 
 
 long sum_longs_from_file(const char *filename) {

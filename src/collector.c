@@ -18,7 +18,7 @@
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 
-
+#define MAX_MSG_SIZE 276
 
 typedef struct file
 {
@@ -97,16 +97,14 @@ void printTree(tree * root) {
 }
 
 void sig_handler(int signum) {
-    //printTree(t);
-
+    
     fprintf(stderr, "Stampo ordinatamente!\n");
+    printTree(t);
+
 }
 
 void int_handler(int signum){
 
-    printf("[Collector]:  Ricevo SIGINT!\n");
-    fflush(stdout);
-    unlink(SOCK_PATH);
     exit(11);
     
 }
@@ -130,17 +128,21 @@ static void run_server () {
     strcpy(psa.sun_path, SOCK_PATH);
 
 
-    fd_sk = socket(AF_UNIX, SOCK_STREAM, 0);
-    unlink(SOCK_PATH);
-    if(fd_sk < 0) {
-        perror("Socket:");
+
+    if((fd_sk = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+        perror("Socket: "); 
+        exit(EXIT_FAILURE);
     }
 
-    int check4err = bind( fd_sk, (struct sockaddr *) &psa, sizeof(psa));
+    if(bind(fd_sk, (struct sockaddr *) &psa, sizeof(psa)) < 0) { 
+        perror("Bind: "); 
+        exit(EXIT_FAILURE);
+    }
 
-    if (check4err < 0) { perror("Bind: "); }
-
-    listen(fd_sk, MAXCONN);
+    if(listen(fd_sk, MAXCONN) < 0) {
+        perror("Listen: ");
+        exit(EXIT_FAILURE);
+    }
 
     
 
@@ -148,29 +150,27 @@ static void run_server () {
     FD_ZERO(&current_sockets);
     FD_SET(fd_sk, &current_sockets);
 
-    while (1) {
+    int nfd;
+    int running = 1;
+
+    while (running) {
 
 
         ready_sockets = current_sockets;
 
-        if( select(max_sockets + 1, &ready_sockets, NULL, NULL, NULL) < 0) {
+        if((nfd = select(max_sockets + 1, &ready_sockets, NULL, NULL, NULL)) < 0) {
 
             if(errno == EINTR) {
-                perror("Select: ");
                 continue;
             } 
             
-            
             perror("Select: ");
-        
             unlink(SOCK_PATH);
             exit(EXIT_FAILURE);
         }
 
-
         else {
             for ( fd = 0; fd < max_sockets + 1; fd++) {
-
 
                 if(FD_ISSET(fd, &ready_sockets)) {
                     
@@ -186,8 +186,13 @@ static void run_server () {
                     
                     // Caso 2: Pronto in lettura: 
                     else { 
-
-                        read(fd, buf, 1024);
+                        
+                        //FD_SET(fd_c, &current_sockets);
+                        
+                        if(readn(fd, buf, MAX_MSG_SIZE) <= 0) {
+                            FD_CLR(fd, &current_sockets);
+                            close(fd);
+                        }
 
                         //fprintf(stderr, buf);
                         
@@ -196,21 +201,20 @@ static void run_server () {
 
                         receivedLong = strtol(buf, &restOfTheString, 10);
 
-                        file * f = createFile(restOfTheString, receivedLong);
-                        
-                        t = addChild(t, f);
+                        if(receivedLong <= 0) {
+                            running = 0;
+                            break;
+                        }
+                        else {
 
-                        //fprintf(stderr, ">>>>>>[%ld][%s]\n", receivedLong, restOfTheString);
+                            file * f = createFile(restOfTheString, receivedLong);
+                            
+                            t = addChild(t, f);
 
+                            memset(buf, 0, MAX_MSG_SIZE);
 
-                        //createFile(restOfTheString, receivedLong);
-                        
-                        write(fd, "Ok", sizeof("Ok"));
+                        }
 
-                        FD_CLR(fd, &current_sockets);
-
-
-                        close(fd);
 
                     }
                 }
@@ -220,6 +224,7 @@ static void run_server () {
         } 
     }
 
+    unlink(SOCK_PATH);
     close(fd_sk);
     fprintf(stderr, "Chiuso socket\n");
 
@@ -248,14 +253,14 @@ int main(int argc, char * const argv[])
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR2, &sa, NULL);
 
-    signal(SIGPIPE, SIG_IGN);
+    signal(SIGPIPE, int_handler);
 
         fprintf(stderr, "Collector: %d\n", getpid());
 
 
     run_server();
     
-    
 
+    fprintf(stderr, "Collector: Quitto!\n");
     exit(11);
 }

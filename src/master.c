@@ -60,7 +60,6 @@ int main(int argc, char * const argv[])
 
     signal(SIGPIPE, sigpipe_handler);
 
-
     fprintf(stderr, "Master: %d\n", getpid());
 
     int opt; 

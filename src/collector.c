@@ -222,14 +222,25 @@ static void run_server () {
 int main(int argc, char * const argv[])
 {
 
+    sigset_t mask;
+    
+    // Maschera i segnali gestiti da Master-Worker.
+    sigaddset(&mask, SIGHUP);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGQUIT);
+    sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGUSR1);
+    
+    sigprocmask(SIG_SETMASK, &mask, NULL);
+
+    
     struct sigaction sa; 
 
+    // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
     sa.sa_handler = &sig_handler;
 
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR2, &sa, NULL);
-
-    signal(SIGINT, int_handler);
 
     fprintf(stderr, "Collector: %d", getpid());
 

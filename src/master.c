@@ -19,13 +19,16 @@
 
 #include "../lib/include/queue.h"
 #include "../lib/include/msg.h"
+#include "../lib/include/thread_master.h"
+#include "../lib/include/thread_worker.h"
+
+
 
 #define SOCK_PATH "tmp/farm.sck"  
 #define QUIT "QUIT"
 #define MAX_MSG_SIZE 276
 
-void *  workers_function( void __attribute((unused)) * arg);
-void *  master_function ( void __attribute((unused)) * arg);
+
 void    read_files_rec(char * dirname, queue * q, int delay);
 long    sum_longs_from_file(const char *filename);
 
@@ -204,155 +207,3 @@ int main(int argc, char * const argv[])
     exit(0);
 }
 
-void* workers_function(void* arg) {
-
-    queue * q = (queue * ) arg;
-
-    char buf[MAX_MSG_SIZE];
-
-    // Crea la socket.
-    int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-
-    int mytid = syscall(__NR_gettid);
-
-    // Set-up del server.
-    struct sockaddr_un server_addr;
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, SOCK_PATH);
-
-    // Si connette - (Aspetta se il Collector non è pronto). 
-    while(connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        sleep(0.1);
-    }
-
-    while (running)  
-    {          
-        char * filename; 
-        long sum;
-
-        filename = queue_dequeue(q);
-
-        fprintf(stderr, "Gioco con %s\n", filename);
-
-        memset(buf, 0, MAX_MSG_SIZE);
-
-        if(strcmp(filename, QUIT) != 0) {
-            sum = sum_longs_from_file(filename);            
-            
-            sprintf(buf, "%ld%s", sum, filename);
-
-            int checkv;
-
-            if((checkv = writen(sockfd, buf, MAX_MSG_SIZE)) < 0) {
-
-                running = 0; 
-                close(sockfd);
-                break; 
-            }
-            
-            //readn(sockfd, buf, MAX_MSG_SIZE);
-
-        }
-        else {
-            sprintf(buf, "%d%s", -1, QUIT);
-            writen(sockfd, buf, MAX_MSG_SIZE);
-            running = 0;
-        }
-
-    }
-
-    fprintf(stderr, "Thread %d: quitting! \n", mytid);
-
-    // Chiude la socket.
-    close(sockfd);
-    
-    return NULL;
-}
-
-
-void read_files_rec(char * dirname, queue * q, int delay) {
-
-    DIR *dir;
-    struct dirent *entry;
-    char path[MAX_MSG_SIZE];
-
-    if (!(dir = opendir(dirname)))
-        return;
-
-    while ((entry = readdir(dir)) != NULL && master_running) {
-
-        if (entry->d_type == DT_DIR) {
-
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-
-            snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
-
-            read_files_rec(path, q, delay);
-
-        } 
-        else {
-
-            char fullpath[MAX_MSG_SIZE];
-
-            snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
-            usleep(1000 * delay);
-
-            queue_enqueue(&feed_queue, fullpath);
-
-
-            }
-            
-        }
-
-    closedir(dir);
-    
-
-}
-    
-void *  master_function ( void __attribute((unused)) * arg) {
-    
-    queue * q = (queue * ) arg;
-    char * filename;
-
-    queue_init(q, 8);
-
-    read_files_rec("filetest", q, 100);
-
-    while (master_running)
-    {
-        sleep(0.1);
-
-    }
-    
-    for (int i = 0; i < 4; i++) {
-        queue_enqueue(q, QUIT);
-    }
-
-    return NULL;
-}
-
-
-long sum_longs_from_file(const char *filename) {
-
-    int fd;
-    long number;
-    long sum = 0;
-    int i = 0;
-    ssize_t bytes_read;
-
-    fd = open(filename, O_RDONLY); // open the file for reading
-    if (fd < 0) {
-        printf("Error opening file!\n");
-        return -1;
-    }
-
-    while ((bytes_read = read(fd, &number, sizeof(long))) == sizeof(long)) {
-        sum += number * i;
-        i++;
-    }
-
-
-    close(fd); // close the file
-    return sum;
-
-}

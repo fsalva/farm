@@ -1,5 +1,5 @@
 #include "../include/thread_master.h"
-#include "../include/queue.h"
+#include "../include/queue.h" 
 
 #include <stdio.h>
 #include <unistd.h>
@@ -20,7 +20,9 @@
 #include <errno.h>
 
 #include "../include/queue.h"
+#include "../include/list.h"
 #include "../include/msg.h"
+#include "../include/arguments.h"
 
 
 #include "../include/queue.h"
@@ -32,33 +34,35 @@
 #define QUIT "QUIT"
 
 extern int master_running;
+extern queue feed_queue;
 
-void    read_files_rec(char * dirname, queue * q, int delay);
-
+void    recursive_file_walk_insert(char * dirname, list * l);
 
 void *  master_function ( void __attribute((unused)) * arg) {
     
-    queue * q = (queue * ) arg;
-    char * filename;
-
-    queue_init(q, 8);
-
-    read_files_rec("filetest", q, 1000);
+    FarmArguments * config = (FarmArguments * ) arg;
+    char *  filename = NULL;
 
     while (master_running)
     {
-        sleep(0.1);
+        filename = list_remove_first(config->farm_setup_file_list);
+        
+        if(filename == NULL) break;
 
+        fprintf(stderr, "- ( %s )\n", filename);
+
+        queue_enqueue(&feed_queue, filename);
+        sleep(1);
     }
     
     for (int i = 0; i < 4; i++) {
-        queue_enqueue(q, QUIT);
+        queue_enqueue(&feed_queue, QUIT);
     }
 
     return NULL;
 }
 
-void read_files_rec(char * dirname, queue * q, int delay) {
+void recursive_file_walk_insert(char * dirname, list * l) {
 
     DIR *dir;
     struct dirent *entry;
@@ -75,7 +79,7 @@ void read_files_rec(char * dirname, queue * q, int delay) {
 
             snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
 
-            read_files_rec(path, q, delay);
+            recursive_file_walk_insert(path, l);
 
         } 
         else {
@@ -83,11 +87,8 @@ void read_files_rec(char * dirname, queue * q, int delay) {
             char fullpath[MAX_MSG_SIZE];
 
             snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
-            
-            usleep(1000 * delay);
 
-            queue_enqueue(q, fullpath);
-
+            list_insert(l, fullpath);
 
             }
             

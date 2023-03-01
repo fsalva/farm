@@ -58,8 +58,6 @@ void* workers_function(void* arg) {
 
         filename = queue_dequeue(q);
 
-        fprintf(stderr, "Gioco con %s\n", filename);
-
         memset(buf, 0, MAX_MSG_SIZE);
 
         if(strcmp(filename, QUIT) != 0) {
@@ -76,8 +74,6 @@ void* workers_function(void* arg) {
                 break; 
             }
             
-            //readn(sockfd, buf, MAX_MSG_SIZE);
-
         }
         else {
             sprintf(buf, "%d%s", -1, QUIT);

@@ -20,6 +20,8 @@
 
 #define MAX_MSG_SIZE 276
 
+int print_instantly = 0;
+
 typedef struct file
 {
     char * filename;
@@ -98,8 +100,7 @@ void printTree(tree * root) {
 
 void sig_handler(int signum) {
     
-    fprintf(stderr, "Stampo ordinatamente!\n");
-    printTree(t);
+    print_instantly = 1;
 
 }
 
@@ -171,6 +172,11 @@ static void run_server () {
 
         else {
             for ( fd = 0; fd < max_sockets + 1; fd++) {
+                
+                if(print_instantly) {
+                    printTree(t);
+                    print_instantly = 0;
+                }
 
                 if(FD_ISSET(fd, &ready_sockets)) {
                     
@@ -187,14 +193,14 @@ static void run_server () {
                     // Caso 2: Pronto in lettura: 
                     else { 
                         
-                        //FD_SET(fd_c, &current_sockets);
+                        // FD_SET(fd_c, &current_sockets);
                         
                         if(readn(fd, buf, MAX_MSG_SIZE) <= 0) {
                             FD_CLR(fd, &current_sockets);
                             close(fd);
                         }
 
-                        //fprintf(stderr, buf);
+                        // fprintf(stderr, buf);
                         
                         char * restOfTheString;
                         long receivedLong;
@@ -259,7 +265,8 @@ int main(int argc, char * const argv[])
 
 
     run_server();
-    
+
+    printTree(t);    
 
     fprintf(stderr, "Collector: Quitto!\n");
     exit(11);

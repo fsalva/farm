@@ -179,18 +179,12 @@ int main(int argc, char * const argv[])
     }
     pthread_join(master, NULL);
 
-    fprintf(stderr, "Ok");
 
-
-    fprintf(stderr, "Threads joined ! \n");
-/*
     while ((wpid = waitpid(pid_child, &status, 0)) > 0)
     {
         printf("Exit status of %d (Collector) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
             (status > 0) ? "accept" : "reject");
     }
-
-*/
 
     free(workers);
 

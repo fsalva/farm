@@ -49,10 +49,8 @@ void *  master_function ( void __attribute((unused)) * arg) {
         
         if(filename == NULL) break;
 
-        fprintf(stderr, "- ( %s )\n", filename);
-
         queue_enqueue(&feed_queue, filename);
-        sleep(1);
+        usleep(200 * 1000);
     }
     
     for (int i = 0; i < 4; i++) {

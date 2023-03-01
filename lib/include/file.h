@@ -1,13 +1,15 @@
+#ifndef _FILE_FARM_
+#define _FILE_FARM_
 
 typedef struct file
 {
     char * filename;
-    int result;
+    long result;
 
 } file;
 
-int compare_elements(file * a, file * b);
+long compare_elements(file * a, file * b);
 
+file * createFile(char * filename, long res);
 
-file * createFile(char * filename, int res);
-
+#endif

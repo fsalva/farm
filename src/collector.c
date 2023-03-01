@@ -11,6 +11,9 @@
 #include <sys/select.h>
 
 #include "../lib/include/msg.h"
+#include "../lib/include/tree.h"
+#include "../lib/include/file.h"
+
 
 #define SOCK_PATH "tmp/farm.sck"
 #define MAXCONN 100
@@ -21,82 +24,9 @@
 #define MAX_MSG_SIZE 276
 
 int print_instantly = 0;
+int running = 1;
 
-typedef struct file
-{
-    char * filename;
-    long result;
-
-} file;
-
-long compare_elements(file * a, file * b) {
-    return a->result > b->result ?  1 : a->result == b->result ? 0 : -1;
-}
-
-typedef struct tree
-{
-    file * f;
-    struct tree * left;
-    struct tree * right;
-
-} tree;
-
-    tree * t = NULL;
-
-
-file * createFile(char * filename, long res) {
-
-    file * f = (file *) calloc(1, sizeof(file));
-
-    f->filename = strdup(filename);
-    f->result = res;
-
-    return f;
-}
-
-
-
-tree * addChild(tree * root, file * f) {
-
-    if(root == NULL) {
-        
-        root = malloc(sizeof(tree));
-
-        root->f= createFile(f->filename, f->result);
-
-        root->left = NULL;
-    
-        root->right = NULL;
-
-    }
-    else {
-    
-        if(compare_elements(root->f, f) > 0 ){
-
-            root->left = addChild(root->left, f);
-        }
-        else{ 
-            root->right = addChild(root->right, f);
-        } 
-
-    }
-        
-    return root;
-
-}
-
-void printTree(tree * root) {
-
-    if(root != NULL) {
-        if(root->left != NULL) printTree(root->left);
-        fprintf(stderr, "%ld\t%s\n", (root->f)->result, root->f->filename);
-        if(root->right != NULL) printTree(root->right);
-
-    }
-    
-
-
-}
+tree * t = NULL;
 
 void sig_handler(int signum) {
     
@@ -105,21 +35,20 @@ void sig_handler(int signum) {
 }
 
 void int_handler(int signum){
-
-    exit(11);
-    
+    running = 0;
 }
 
-
+void abrt_handler(int signum){
+    fprintf(stderr, "FUCK!");
+    _exit(EXIT_FAILURE);
+}
 
 
 static void run_server () {
 
     int fd_sk, fd_c, max_sockets = 0, fd; 
     
-    int nread; 
-
-    char buf[1024];
+    char buf[MAX_MSG_SIZE];
 
     fd_set current_sockets, ready_sockets;
 
@@ -152,7 +81,7 @@ static void run_server () {
     FD_SET(fd_sk, &current_sockets);
 
     int nfd;
-    int running = 1;
+    
 
     while (running) {
 
@@ -232,14 +161,25 @@ static void run_server () {
 
     unlink(SOCK_PATH);
     close(fd_sk);
-    fprintf(stderr, "Chiuso socket\n");
-
 }
 
 int main(int argc, char * const argv[])
 {
+    signal(SIGPIPE, int_handler);
+
+    struct sigaction sa; 
 
     sigset_t mask;
+    
+    // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
+    sa.sa_handler = &sig_handler;
+
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR2, &sa, NULL);
+
+    sa.sa_handler = &abrt_handler;
+    sigaction(SIGABRT, &sa, NULL);
+
     
     // Maschera i segnali gestiti da Master-Worker.
     sigaddset(&mask, SIGHUP);
@@ -251,23 +191,13 @@ int main(int argc, char * const argv[])
     sigprocmask(SIG_SETMASK, &mask, NULL);
 
     
-    struct sigaction sa; 
 
-    // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
-    sa.sa_handler = &sig_handler;
 
-    sa.sa_flags = SA_RESTART;
-    sigaction(SIGUSR2, &sa, NULL);
-
-    signal(SIGPIPE, int_handler);
-
-        fprintf(stderr, "Collector: %d\n", getpid());
-
+    fprintf(stderr, "Collector: %d\n", getpid());
 
     run_server();
 
     printTree(t);    
 
-    fprintf(stderr, "Collector: Quitto!\n");
     exit(11);
 }

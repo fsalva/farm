@@ -50,7 +50,7 @@ void *  master_function ( void __attribute((unused)) * arg) {
         if(filename == NULL) break;
 
         queue_enqueue(&feed_queue, filename);
-        usleep(200 * 1000);
+        usleep(config->farm_setup_delay_time * 1000);
     }
     
     for (int i = 0; i < 4; i++) {

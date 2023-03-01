@@ -5,14 +5,7 @@
 #include <string.h>
 #include <sys/un.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <sys/socket.h>
-#include <stdbool.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/syscall.h>
-#include <dirent.h>
-#include <limits.h>
 
 #include <pthread.h>
 #include <errno.h>
@@ -28,6 +21,8 @@
 #define QUIT "QUIT"
 #define MAX_MSG_SIZE 276
 
+#define PRINT_USAGE_HELP        fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [-d directory name] [-t time delay]\n", argv[0]);
+#define FATAL_ERROR             fatal_error = 1;
 
 void    read_files_rec(char * dirname, queue * q, int delay);
 long    sum_longs_from_file(const char *filename);
@@ -35,10 +30,9 @@ long    sum_longs_from_file(const char *filename);
 int     pid_child = -1;
 int     running = 1;
 int     master_running = 1;
+int     fatal_error = 0;
 
-
-void sigpipe_handler(int signum) {
-}
+void sigpipe_handler(int signum) {}
 
 // Invia al processo Collector un SIGUSR2 (Trigger stampa istantanea)
 void handler_sigusr1(int signum) {
@@ -50,11 +44,15 @@ void sigint_handler(int signum) {
     master_running = 0;
 }
 
+void cleanup();
+
 queue feed_queue;
 queue initial_queue;
 
 int main(int argc, char * const argv[])
 {   
+    atexit(cleanup);
+
     struct sigaction sa; 
 
     sa.sa_handler = &handler_sigusr1;
@@ -73,9 +71,11 @@ int main(int argc, char * const argv[])
     // Se sei il figlio, fai partire il processo Master-Worker
     if (pid_child == 0) {
         execl("bin/collector", "Collector", NULL);
+        _exit(EXIT_FAILURE);
     }
 
     fprintf(stderr, "Master: %d\n", getpid());
+    
 
     int opt; 
     
@@ -98,11 +98,26 @@ int main(int argc, char * const argv[])
         
         switch (opt) {
             case 'n':
-                config->farm_setup_threads_number = atoi(optarg);
+                config->farm_setup_threads_number = strtol(optarg, NULL, 10);
+
+                fprintf(stderr, "NTHREAD: %ld\n", config->farm_setup_threads_number);
+                if(config->farm_setup_threads_number <= 0 || errno == ERANGE) {
+                    PRINT_USAGE_HELP
+                    FATAL_ERROR
+                    exit(EXIT_FAILURE);
+                }
+
                 break;
 
             case 'q':
-                config->farm_setup_queue_length = atoi(optarg); // TODO: #2 #1  Undefined Behavior se passi una stringa invece di atoi, implementare con strtol > int (check del range se INTEGER).
+                config->farm_setup_queue_length = strtol(optarg, NULL, 10);
+                
+                if(config->farm_setup_queue_length <= 0 || errno == ERANGE) {
+                    PRINT_USAGE_HELP
+                    FATAL_ERROR
+                    exit(EXIT_FAILURE);
+                }
+
                 break;
 
             case 'd':
@@ -111,11 +126,17 @@ int main(int argc, char * const argv[])
                 break;
 
             case 't':
-                config->farm_setup_delay_time = atoi(optarg);
+                config->farm_setup_delay_time = strtol(optarg, NULL, 10);
+                if(config->farm_setup_delay_time <= 0 || errno == ERANGE) {
+                    PRINT_USAGE_HELP
+                    FATAL_ERROR
+                    exit(EXIT_FAILURE);
+                }
                 break;
 
             default:
-                fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [-d config->farm_setup_directory_name] [-t time delay]\n", argv[0]);
+                PRINT_USAGE_HELP
+                FATAL_ERROR
                 exit(EXIT_FAILURE);
         }
     }
@@ -137,8 +158,8 @@ int main(int argc, char * const argv[])
 
     if(config->farm_setup_directory_name == NULL) {
         if(argc - optind <= 0) {
-            fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [filename1, filename2, ..., filenameN] [-t time delay]\n", argv[0]);
-            exit(1);
+            PRINT_USAGE_HELP
+            exit(EXIT_FAILURE);
         }
     }
     else {
@@ -147,25 +168,22 @@ int main(int argc, char * const argv[])
 
     }   
 
-    // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. Controllo quindi che optind sia inferiore di argc)
-    if(optind < argc) {
-        while(optind < argc) {
-            // Inserisco gli altri file nella lista di file da elaborare: 
-            list_insert(config->farm_setup_file_list, argv[optind++]);            
+    // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. 
+    // Controllo quindi che optind sia inferiore di argc)
+    while(optind < argc) {
+        // Inserisco gli altri file nella lista di file da elaborare: 
+        char * file = strdup(argv[optind++]);
+        list_insert(config->farm_setup_file_list, file);            
 
-        }
     }
 
-    int status = 0; int wpid; 
 
-    if(config->farm_setup_threads_number == -1 ) config->farm_setup_threads_number = 4;    
+
+    if(config->farm_setup_threads_number == -1 ) 
+        config->farm_setup_threads_number = 4;    
 
     // Creo Workers thread
-
     workers = malloc(sizeof(pthread_t) * config->farm_setup_threads_number);
-
-
-
 
     for(int i = 0; i < config->farm_setup_threads_number; i++) {
         pthread_create(&workers[i], NULL, workers_function, &feed_queue); 
@@ -180,11 +198,7 @@ int main(int argc, char * const argv[])
     pthread_join(master, NULL);
 
 
-    while ((wpid = waitpid(pid_child, &status, 0)) > 0)
-    {
-        printf("Exit status of %d (Collector) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
-            (status > 0) ? "accept" : "reject");
-    }
+    
 
     free(workers);
 
@@ -193,3 +207,23 @@ int main(int argc, char * const argv[])
     exit(0);
 }
 
+void cleanup() {
+
+    int status = 0;  
+    int wpid;
+
+    sleep(1);
+
+    if(fatal_error) {
+        fprintf(stderr, "T'ammazzo madòòòòòò guarda eh!\n");
+        kill(pid_child, SIGABRT);
+
+
+    }
+    
+    while ((wpid = waitpid(pid_child, &status, 0)) > 0)
+    {
+        printf("Exit status of %d (Collector) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
+            (status > 0) ? "accept" : "reject");
+    }
+}

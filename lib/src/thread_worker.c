@@ -61,7 +61,9 @@ void* workers_function(void* arg) {
         memset(buf, 0, MAX_MSG_SIZE);
 
         if(strcmp(filename, QUIT) != 0) {
-            sum = sum_longs_from_file(filename);            
+            sum = sum_longs_from_file(filename);
+
+            if(sum < 0) continue;            
             
             sprintf(buf, "%ld%s", sum, filename);
 

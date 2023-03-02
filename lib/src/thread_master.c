@@ -53,7 +53,7 @@ void *  master_function ( void __attribute((unused)) * arg) {
         usleep(config->farm_setup_delay_time * 1000);
     }
     
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < config->farm_setup_threads_number; i++) {
         queue_enqueue(&feed_queue, QUIT);
     }
 

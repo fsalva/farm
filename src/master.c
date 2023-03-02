@@ -73,8 +73,6 @@ int main(int argc, char * const argv[])
         execl("bin/collector", "Collector", NULL);
         _exit(EXIT_FAILURE);
     }
-
-    fprintf(stderr, "Master: %d\n", getpid());
     
 
     int opt; 
@@ -181,6 +179,9 @@ int main(int argc, char * const argv[])
 
     if(config->farm_setup_threads_number == -1 ) 
         config->farm_setup_threads_number = 4;    
+
+
+    fprintf(stderr, "Master: %d\n", getpid());
 
     // Creo Workers thread
     workers = malloc(sizeof(pthread_t) * config->farm_setup_threads_number);

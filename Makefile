@@ -36,7 +36,10 @@ $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
 
 clean:
-	- rm -r bin/* obj/* tmp/* lib/obj/* lib/*.a
+	- rm -r bin/* obj/* tmp/* lib/obj/* lib/*.a testdir/* 
+	- rm file* 
+	- rm -r testdir
+	- rm collector expected.txt farm generafile master 
 
 push:
 	git add .
@@ -47,6 +50,10 @@ $(ARTIFACT) : $(LIBDIR)/$(SRC)/*
 	@for f in $^; do $(CC) $(CFLAGS) -c $${f} ;  done
 	@for f in $(shell ls ${LIBDIR}/${SRC}); do mv $${f%%.*}.o $(LIBDIR)/$(OBJ) ; done
 	-ar -rvs $(ARTIFACT) $(LIBDIR)/$(OBJ)/*
+
+test: all
+	- cp bin/* .
+	- chmod +x test.sh && ./test.sh
 
 
 valgrind: 

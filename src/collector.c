@@ -48,6 +48,8 @@ static void run_server () {
 
     int fd_sk, fd_c, max_sockets = 0, fd; 
     
+    int current_sockets_number = 0;
+
     char buf[MAX_MSG_SIZE];
 
     fd_set current_sockets, ready_sockets;
@@ -100,6 +102,7 @@ static void run_server () {
         }
 
         else {
+
             for ( fd = 0; fd < max_sockets + 1; fd++) {
                 
                 if(print_instantly) {
@@ -113,6 +116,8 @@ static void run_server () {
                     if(fd == fd_sk) { 
                         
                         fd_c = accept(fd, NULL, 0);
+
+                        current_sockets_number++;
 
                         FD_SET(fd_c, &current_sockets);
 
@@ -137,7 +142,14 @@ static void run_server () {
                         receivedLong = strtol(buf, &restOfTheString, 10);
 
                         if(receivedLong <= 0) {
-                            running = 0;
+                            current_sockets_number--;
+                            FD_CLR(fd, &current_sockets);
+                            close(fd);
+                            
+                            if(current_sockets_number == 0) {
+                                running = 0;
+                            } 
+                            
                             break;
                         }
                         else {
@@ -190,14 +202,12 @@ int main(int argc, char * const argv[])
     
     sigprocmask(SIG_SETMASK, &mask, NULL);
 
-    
-
-
-    fprintf(stderr, "Collector: %d\n", getpid());
 
     run_server();
 
     printTree(t);    
+    //treeprint(t, 0);
 
+    
     exit(11);
 }

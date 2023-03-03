@@ -61,7 +61,11 @@ int main(int argc, char * const argv[])
     sigaction(SIGUSR1, &sa, NULL);
 
     //TODO: Gestione con sigaction
-    signal(SIGINT, sigint_handler);
+    sa.sa_handler = &handler_sigusr1;
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGHUP, &sa, NULL);
 
     signal(SIGPIPE, sigpipe_handler);
     
@@ -98,7 +102,6 @@ int main(int argc, char * const argv[])
             case 'n':
                 config->farm_setup_threads_number = strtol(optarg, NULL, 10);
 
-                fprintf(stderr, "NTHREAD: %ld\n", config->farm_setup_threads_number);
                 if(config->farm_setup_threads_number <= 0 || errno == ERANGE) {
                     PRINT_USAGE_HELP
                     FATAL_ERROR
@@ -180,9 +183,6 @@ int main(int argc, char * const argv[])
     if(config->farm_setup_threads_number == -1 ) 
         config->farm_setup_threads_number = 4;    
 
-
-    fprintf(stderr, "Master: %d\n", getpid());
-
     // Creo Workers thread
     workers = malloc(sizeof(pthread_t) * config->farm_setup_threads_number);
 
@@ -216,15 +216,10 @@ void cleanup() {
     sleep(1);
 
     if(fatal_error) {
-        fprintf(stderr, "T'ammazzo madòòòòòò guarda eh!\n");
         kill(pid_child, SIGABRT);
-
-
     }
     
     while ((wpid = waitpid(pid_child, &status, 0)) > 0)
     {
-        printf("Exit status of %d (Collector) was %d (%s)\n", (int)wpid, WEXITSTATUS(status),
-            (status > 0) ? "accept" : "reject");
     }
 }

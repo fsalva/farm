@@ -22,5 +22,6 @@ tree * addRight(tree * root, file * f);
 
 void printTree(tree * root);
 
+void treeprint(tree * root, int level);
 
 #endif

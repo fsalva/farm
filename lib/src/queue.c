@@ -69,7 +69,6 @@ char * queue_dequeue(queue *q) {
     pthread_mutex_lock(&(q->mutex));
 
 
-
     while(q->size == 0) {
         pthread_cond_wait(&q->nemptyCond, &q->mutex);
     }

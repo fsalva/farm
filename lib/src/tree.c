@@ -5,6 +5,7 @@
 
 tree * addChild(tree * root, file * f) {
 
+
     if(root == NULL) {
         
         root = malloc(sizeof(tree));
@@ -22,12 +23,11 @@ tree * addChild(tree * root, file * f) {
 
             root->left = addChild(root->left, f);
         }
-        else{ 
+        else if(compare_elements(root->f, f) < 0){ 
             root->right = addChild(root->right, f);
         } 
 
-    }
-        
+    }        
     return root;
 
 }
@@ -35,13 +35,27 @@ tree * addChild(tree * root, file * f) {
 void printTree(tree * root) {
 
     if(root != NULL) {
-        if(root->left != NULL) printTree(root->left);
-        fprintf(stderr, "%ld\t%s\n", (root->f)->result, root->f->filename);
-        if(root->right != NULL) printTree(root->right);
+        if(root->left != NULL) {
+            printTree(root->left);
+        }
+        fprintf(stdout, "%ld %s\n", (root->f)->result, root->f->filename);
+
+        if(root->right != NULL){
+            printTree(root->right);
+        } 
 
     }
     
+}
 
-
+void treeprint(tree *root, int level)
+{
+        if (root == NULL)
+                return;
+        for (int i = 0; i < level; i++)
+                printf(i == level - 1 ? "|-" : "  ");
+        printf("[%d] :%ld\n", level, root->f->result);
+        treeprint(root->left, level + 1);
+        treeprint(root->right, level + 1);
 }
 

@@ -8,9 +8,7 @@
 #include <string.h>
 #include <sys/un.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <sys/socket.h>
-#include <stdbool.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/syscall.h>
@@ -24,8 +22,9 @@
 #include "../include/msg.h"
 #include "../include/arguments.h"
 
-
 #include "../include/queue.h"
+
+#define _GNU_SOURCE
 
 #define SOCK_PATH "tmp/farm.sck"  
 #define QUIT "QUIT"
@@ -87,6 +86,7 @@ void recursive_file_walk_insert(char * dirname, list * l) {
             snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
 
             list_insert(l, fullpath);
+            //fprintf(stderr, "Inserito: %s\n", fullpath);
 
             }
             

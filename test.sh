@@ -1,11 +1,11 @@
 #!/bin/bash
 
-if [ ! -e ./generafile ];
+if [ ! -e generafile ];
 then
     echo "Compilare generafile, eseguibile mancante!";
     exit 1
 fi
-if [ ! -e ./farm ];
+if [ ! -e farm ];
 then
     echo "Compilare farm, eseguibile mancante!"
     exit 1

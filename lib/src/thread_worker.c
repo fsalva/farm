@@ -39,8 +39,6 @@ void* workers_function(void* arg) {
     // Crea la socket.
     int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 
-    int mytid = syscall(__NR_gettid);
-
     // Set-up del server.
     struct sockaddr_un server_addr;
     server_addr.sun_family = AF_UNIX;
@@ -63,14 +61,18 @@ void* workers_function(void* arg) {
         if(strcmp(filename, QUIT) != 0) {
             sum = sum_longs_from_file(filename);
 
-            if(sum < 0) continue;            
+            if(sum < 0) {
+                fprintf(stderr, "SOMMA < 0\n");
+                continue;            
+            }
             
             sprintf(buf, "%ld%s", sum, filename);
 
             int checkv;
 
             if((checkv = writen(sockfd, buf, MAX_MSG_SIZE)) < 0) {
-
+                
+                fprintf(stderr, "Scrittura fallita. Cercavo di scrivere: %s. \n", buf);
                 running = 0; 
                 close(sockfd);
                 break; 
@@ -84,9 +86,6 @@ void* workers_function(void* arg) {
         }
 
     }
-
-    fprintf(stderr, "Thread %d: quitting! \n", mytid);
-
     // Chiude la socket.
     close(sockfd);
     

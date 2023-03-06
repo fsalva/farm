@@ -55,7 +55,7 @@ int main(int argc, char * const argv[])
 {   
     atexit(cleanup);
 
-    struct sigaction sa; 
+    struct sigaction sa = {0}; 
 
     sa.sa_handler = &handler_sigusr1;
 
@@ -122,8 +122,7 @@ int main(int argc, char * const argv[])
                 break;
 
             case 'd':
-                config->farm_setup_directory_name = malloc(strlen(optarg) + 1);
-                strncpy(config->farm_setup_directory_name, optarg, strlen(optarg));
+                config->farm_setup_directory_name = strdup(optarg);
                 break;
 
             case 't':
@@ -193,8 +192,6 @@ int main(int argc, char * const argv[])
     
     pthread_create(&master, NULL, master_function, config);
 
-    fprintf(stderr, "IO ASPETTO EHHHH!");
-
     for (int i = 0; i < config->farm_setup_threads_number; i++) {
         pthread_join(workers[i], NULL);
 
@@ -214,7 +211,7 @@ void cleanup() {
     int status = 0;  
     int wpid;
 
-    sleep(1);
+    //sleep(1);
 
     emptyQueue(&feed_queue);
     list_destroy(config->farm_setup_file_list);

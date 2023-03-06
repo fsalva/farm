@@ -179,9 +179,9 @@ int main(int argc, char * const argv[])
 {
     signal(SIGPIPE, int_handler);
 
-    struct sigaction sa; 
+    struct sigaction sa = {0}; 
 
-    sigset_t mask;
+    sigset_t mask = {0};
     
     // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
     sa.sa_handler = &sig_handler;

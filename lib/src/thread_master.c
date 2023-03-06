@@ -63,8 +63,8 @@ void *  master_function ( void __attribute((unused)) * arg) {
 
 void recursive_file_walk_insert(char * dirname, list * l) {
 
-    DIR *dir;
-    struct dirent *entry;
+    DIR *dir = {0};
+    struct dirent *entry = {0};
     char path[MAX_MSG_SIZE];
 
     if (!(dir = opendir(dirname)))
@@ -84,6 +84,8 @@ void recursive_file_walk_insert(char * dirname, list * l) {
         else {
 
             char fullpath[MAX_MSG_SIZE];
+
+            if(dirname == NULL) fprintf(stderr, "Ueue amici del webb!!!!");
 
             snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
 

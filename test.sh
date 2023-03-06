@@ -90,7 +90,7 @@ fi
 # esecuzione con valgrind. Se valgrind trova dei problemi esce con 
 # exit status 1.
 #
-valgrind --error-exitcode=1 --log-file=/dev/null ./farm -d testdir file* 2>&1 > /dev/null
+valgrind --error-exitcode=1 --log-file=/dev/null --trace-children=yes  ./farm -d testdir file* 2>&1 > /dev/null
 if [[ $? != 0 ]]; then
     echo "test4 failed"
 else
@@ -98,7 +98,7 @@ else
 fi
 
 # verifica di memory leaks
-valgrind --leak-check=full --error-exitcode=1 --log-file=/dev/null ./farm file* -d testdir 2>&1 > /dev/null
+valgrind --leak-check=full --error-exitcode=1 --trace-children=yes --log-file=/dev/null ./farm file* -d testdir 2>&1 > /dev/null
 if [[ $? != 0 ]]; then
     echo "test5 failed"
 else

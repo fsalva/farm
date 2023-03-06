@@ -28,6 +28,11 @@ tree * addChild(tree * root, file * f) {
             root->right = addChild(root->right, f);
         } 
 
+        else {
+            free(f->filename);
+            free(f);
+        }
+
     }        
     return root;
 

@@ -38,21 +38,23 @@ void int_handler(int signum){
     running = 0;
 }
 
-void abrt_handler(int signum){
-    fprintf(stderr, "FUCK!");
+void abrt_handler(int signum){  // Per test.
     _exit(EXIT_FAILURE);
 }
 
 
 static void run_server () {
 
-    int fd_sk, fd_c, max_sockets = 0, fd; 
-    
-    int current_sockets_number = 0;
+    int fd; 
+    int fd_c; 
+    int fd_sk; 
+    int max_socket = 0;             // Ottimizza ciclo select
+    int current_sockets_number = 0; // Controlla se ci sono socket client ancora attive. 
 
     char buf[MAX_MSG_SIZE];
 
-    fd_set current_sockets, ready_sockets;
+    fd_set current_sockets;
+    fd_set ready_sockets;
 
     struct sockaddr_un psa;
     memset(&psa, 0, sizeof(psa));
@@ -78,19 +80,17 @@ static void run_server () {
 
     
 
-    max_sockets = fd_sk;
+    max_socket = fd_sk;
     FD_ZERO(&current_sockets);
     FD_SET(fd_sk, &current_sockets);
 
     int nfd;
-    
 
     while (running) {
 
-
         ready_sockets = current_sockets;
 
-        if((nfd = select(max_sockets + 1, &ready_sockets, NULL, NULL, NULL)) < 0) {
+        if((nfd = select(max_socket + 1, &ready_sockets, NULL, NULL, NULL)) < 0) {
 
             if(errno == EINTR) {
                 continue;
@@ -103,7 +103,7 @@ static void run_server () {
 
         else {
 
-            for ( fd = 0; fd < max_sockets + 1; fd++) {
+            for ( fd = 0; fd < max_socket + 1; fd++) {
                 
                 if(print_instantly) {
                     printTree(t);
@@ -121,53 +121,47 @@ static void run_server () {
 
                         FD_SET(fd_c, &current_sockets);
 
-                        if(fd_c > max_sockets) max_sockets = fd_c;
+                        if(fd_c > max_socket) max_socket = fd_c;
                     }
                     
                     // Caso 2: Pronto in lettura: 
                     else { 
-                        
-                        // FD_SET(fd_c, &current_sockets);
-                        
+                                                
                         if(readn(fd, buf, MAX_MSG_SIZE) <= 0) {
                             FD_CLR(fd, &current_sockets);
                             close(fd);
                         }
-
-                        // fprintf(stderr, buf);
                         
-                        char * restOfTheString;
-                        long receivedLong;
+                        char *  restOfTheString;
+                        long    receivedLong;
 
                         receivedLong = strtol(buf, &restOfTheString, 10);
 
-                        if(receivedLong <= 0) {
+                        if(receivedLong <= 0) { // Uno dei thread worker si è spento.
                             current_sockets_number--;
                             FD_CLR(fd, &current_sockets);
                             close(fd);
                             
                             if(current_sockets_number == 0) {
-                                running = 0;
+                                running = 0;    // Se non ho più fd attivi smetto di funzionare.
                             } 
                             
                             break;
                         }
                         else {
-
+                            
+                            // Creo il file: 
                             file * f = createFile(restOfTheString, receivedLong);
                             
+                            // Lo aggiungo ad un albero binario: 
                             t = addChild(t, f);
 
                             memset(buf, 0, MAX_MSG_SIZE);
 
                         }
-
-
                     }
                 }
-
             }
-
         } 
     }
 
@@ -177,7 +171,7 @@ static void run_server () {
 
 int main(int argc, char * const argv[])
 {
-    signal(SIGPIPE, int_handler);
+    
 
     struct sigaction sa = {0}; 
 
@@ -199,7 +193,8 @@ int main(int argc, char * const argv[])
     sigaddset(&mask, SIGQUIT);
     sigaddset(&mask, SIGTERM);
     sigaddset(&mask, SIGUSR1);
-    
+    sigaddset(&mask, SIGPIPE);
+
     sigprocmask(SIG_SETMASK, &mask, NULL);
 
 

@@ -44,6 +44,8 @@ void sigint_handler(int signum) {
     master_running = 0;
 }
 
+void ignore_sigpipe(int signum) {}
+
 void cleanup();
 
 queue feed_queue;
@@ -69,7 +71,8 @@ int main(int argc, char * const argv[])
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGHUP, &sa, NULL);
 
-    signal(SIGPIPE, sigpipe_handler);
+    sa.sa_handler = &ignore_sigpipe;
+    sigaction(SIGPIPE, &sa, NULL);
     
     // Duplica il processo
     pid_child = fork();

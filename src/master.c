@@ -60,7 +60,6 @@ int main(int argc, char * const argv[])
     struct sigaction sa = {0}; 
 
     sa.sa_handler = &handler_sigusr1;
-
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &sa, NULL);
 

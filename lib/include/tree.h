@@ -12,19 +12,11 @@ typedef struct tree
 } tree;
 
 
-tree * addNode(file * f);
+tree * tree_add_node(tree * root, file * f);
 
-tree * addChild(tree * root, file * f);
+void tree_print(tree * root);
 
-tree * addLeft(tree * root, file * f);
-
-tree * addRight(tree * root, file * f); 
-
-void printTree(tree * root);
-
-void treeprint(tree * root, int level);
-
-void postOrderFree(tree * root);
+void tree_destroy(tree * root);
 
 
 #endif

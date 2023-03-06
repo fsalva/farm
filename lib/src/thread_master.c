@@ -23,12 +23,10 @@
 #include "../include/arguments.h"
 
 #include "../include/queue.h"
+#include "../include/macro.h"
 
+// Errore DT_DIR su file editor, in compilazione sparisce. 
 #define _GNU_SOURCE
-
-#define SOCK_PATH "tmp/farm.sck"  
-#define QUIT "QUIT"
-#define MAX_MSG_SIZE 276
 
 #define QUIT "QUIT"
 
@@ -85,12 +83,9 @@ void recursive_file_walk_insert(char * dirname, list * l) {
 
             char fullpath[MAX_MSG_SIZE];
 
-            if(dirname == NULL) fprintf(stderr, "Ueue amici del webb!!!!");
-
             snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
 
             list_insert(l, fullpath);
-            //fprintf(stderr, "Inserito: %s\n", fullpath);
 
             }
             

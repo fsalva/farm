@@ -42,8 +42,46 @@ void abrt_handler(int signum){  // Per test.
     _exit(EXIT_FAILURE);
 }
 
+void server_run ();
 
-static void run_server () {
+int main(int argc, char * const argv[])
+{
+    struct sigaction sa = {0}; 
+
+    sigset_t mask = {0};
+    
+    // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
+    sa.sa_handler = &sig_handler;
+
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR2, &sa, NULL);
+
+    sa.sa_handler = &abrt_handler;
+    sigaction(SIGABRT, &sa, NULL);
+
+    
+    // Maschera i segnali gestiti da Master-Worker.
+    sigaddset(&mask, SIGHUP);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGQUIT);
+    sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGUSR1);
+    sigaddset(&mask, SIGPIPE);
+
+    sigprocmask(SIG_SETMASK, &mask, NULL);
+
+    server_run();
+
+    tree_print(t);    
+
+    tree_destroy(t);
+
+    
+    exit(EXIT_SUCCESS);
+}
+
+
+void server_run () {
 
     int fd; 
     int fd_c; 
@@ -106,7 +144,7 @@ static void run_server () {
             for ( fd = 0; fd < max_socket + 1; fd++) {
                 
                 if(print_instantly) {
-                    printTree(t);
+                    tree_print(t);
                     print_instantly = 0;
                 }
 
@@ -151,10 +189,10 @@ static void run_server () {
                         else {
                             
                             // Creo il file: 
-                            file * f = createFile(restOfTheString, receivedLong);
+                            file * f = file_create(restOfTheString, receivedLong);
                             
                             // Lo aggiungo ad un albero binario: 
-                            t = addChild(t, f);
+                            t = tree_add_node(t, f);
 
                             memset(buf, 0, MAX_MSG_SIZE);
 
@@ -167,44 +205,4 @@ static void run_server () {
 
     unlink(SOCK_PATH);
     close(fd_sk);
-}
-
-int main(int argc, char * const argv[])
-{
-    
-
-    struct sigaction sa = {0}; 
-
-    sigset_t mask = {0};
-    
-    // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
-    sa.sa_handler = &sig_handler;
-
-    sa.sa_flags = SA_RESTART;
-    sigaction(SIGUSR2, &sa, NULL);
-
-    sa.sa_handler = &abrt_handler;
-    sigaction(SIGABRT, &sa, NULL);
-
-    
-    // Maschera i segnali gestiti da Master-Worker.
-    sigaddset(&mask, SIGHUP);
-    sigaddset(&mask, SIGINT);
-    sigaddset(&mask, SIGQUIT);
-    sigaddset(&mask, SIGTERM);
-    sigaddset(&mask, SIGUSR1);
-    sigaddset(&mask, SIGPIPE);
-
-    sigprocmask(SIG_SETMASK, &mask, NULL);
-
-
-    run_server();
-
-    printTree(t);    
-    //treeprint(t, 0);
-
-    postOrderFree(t);
-
-    
-    exit(11);
 }

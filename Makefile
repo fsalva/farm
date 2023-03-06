@@ -5,32 +5,26 @@ CC=gcc
 SRC=src
 OBJ=obj
 BIN=bin
-
 LIBDIR=lib
+
 CFLAGS=-Wall -g -lpthread 
 
-LIBPATH = -l./lib/include/
-ARTIPATH = -L./lib/
+STATICLIB = lib/lib.a 
 
-ARTIFACT = lib/lib.a 
+all: clean $(STATICLIB) $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
 
-all: clean $(ARTIFACT) $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
-
-
-obj/%.o: src/%.c $(ARTIFACT)
+obj/%.o: src/%.c $(STATICLIB)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BIN)/farm: $(OBJ)/farm.o $(ARTIFACT)
+$(BIN)/farm: $(OBJ)/farm.o $(STATICLIB)
 	$(CC) $(CFLAGS) $(OBJ)/farm.o -o $@ 
 
+$(BIN)/master: $(OBJ)/master.o $(STATICLIB)
+	$(CC) $(CFLAGS) $(OBJ)/master.o  -o $@ $(STATICLIB)
 
-$(BIN)/master: $(OBJ)/master.o $(ARTIFACT)
-	$(CC) $(CFLAGS) $(OBJ)/master.o  -o $@ $(ARTIFACT)
 
-
-$(BIN)/collector: $(OBJ)/collector.o $(ARTIFACT) 
-	$(CC) $(CFLAGS) $(OBJ)/collector.o -o $@ $(ARTIFACT)
-
+$(BIN)/collector: $(OBJ)/collector.o $(STATICLIB) 
+	$(CC) $(CFLAGS) $(OBJ)/collector.o -o $@ $(STATICLIB)
 
 $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
@@ -46,19 +40,14 @@ push:
 	git commit -m "$(COMMIT)"
 	git push origin
 
-$(ARTIFACT) : $(LIBDIR)/$(SRC)/*
+$(STATICLIB) : $(LIBDIR)/$(SRC)/*
 	@for f in $^; do $(CC) $(CFLAGS) -c $${f} ;  done
 	@for f in $(shell ls ${LIBDIR}/${SRC}); do mv $${f%%.*}.o $(LIBDIR)/$(OBJ) ; done
-	-ar -rvs $(ARTIFACT) $(LIBDIR)/$(OBJ)/*
+	-ar -rvs $(STATICLIB) $(LIBDIR)/$(OBJ)/*
 
 test: all
 	- cp bin/* .
 	- chmod +x test.sh && ./test.sh
 
 
-valgrind: 
-	- make clean 
-	- make all
-	valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes bin/farm -d filetest > valgr.txt 2>&1
-
-.PHONY: all clean push valgrind
+.PHONY: all clean push valgrind test

@@ -1,33 +1,20 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/wait.h>
 #include <string.h>
-#include <sys/un.h>
+#include <sys/un.h> // Socket
 #include <sys/types.h>
-#include <fcntl.h>
+#include <fcntl.h>  // open
 #include <sys/socket.h>
-#include <stdbool.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/syscall.h>
 #include <dirent.h>
-#include <limits.h>
 #include <pthread.h>
 #include <errno.h>
 
 #include "../include/queue.h"
 #include "../include/msg.h"
-
-
 #include "../include/thread_worker.h"
 #include "../include/queue.h"
-
-#define SOCK_PATH "tmp/farm.sck"  
-#define QUIT "QUIT"
-#define MAX_MSG_SIZE 276
-
-extern int master_running;
+#include "../include/macro.h"
 
 void* workers_function(void* arg) {
 
@@ -62,7 +49,6 @@ void* workers_function(void* arg) {
             sum = sum_longs_from_file(filename);
 
             if(sum < 0) {
-                fprintf(stderr, "SOMMA < 0\n");
                 continue;            
             }
             
@@ -71,8 +57,6 @@ void* workers_function(void* arg) {
             int checkv;
 
             if((checkv = writen(sockfd, buf, MAX_MSG_SIZE)) < 0) {
-                
-                fprintf(stderr, "Scrittura fallita. Cercavo di scrivere: %s. \n", buf);
                 running = 0; 
                 close(sockfd);
                 break; 
@@ -108,7 +92,6 @@ long sum_longs_from_file(const char *filename) {
 
     fd = open(filename, O_RDONLY); // open the file for reading
     if (fd < 0) {
-        printf("Error opening file!\n");
         return -1;
     }
 

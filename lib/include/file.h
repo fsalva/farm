@@ -3,14 +3,13 @@
 
 typedef struct file
 {
-    char * filename;
-    long result;
-
+    char *  filename;
+    long    result;
 } file;
 
-long compare_elements(file * a, file * b);
+long    file_compare_elements(file * a, file * b);
 
-file * createFile(char * filename, long res);
-void destroy_file(file * f);
+file *  file_create(char * filename, long res);
+void    file_destroy(file * f);
 
 #endif

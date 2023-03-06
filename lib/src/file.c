@@ -1,17 +1,14 @@
-#ifndef MYFILE_H
-#define MYFILE_H
-
 #include "../include/file.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-long compare_elements(file * a, file * b) {
+long file_compare_elements(file * a, file * b) {
     return a->result > b->result ?  1 : a->result == b->result ? 0 : -1;
 }
 
-file * createFile(char * filename, long res) {
+file * file_create(char * filename, long res) {
 
     file * f = (file *) calloc(1, sizeof(file));
 
@@ -22,12 +19,9 @@ file * createFile(char * filename, long res) {
     return f;
 }
 
-void destroy_file(file * f) {
+void file_destroy(file * f) {
     
     free(f->filename);
 
     free(f);
 }
-
-
-#endif

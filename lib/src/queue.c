@@ -31,8 +31,6 @@ int queue_enqueue(queue *q, char *value) {
 
     queue_node *node = calloc( 1, sizeof(queue_node));
 
-    
-
     node->value = calloc(strlen(value) + 1, sizeof(char));
     if(!node->value) return -1;
 
@@ -40,7 +38,7 @@ int queue_enqueue(queue *q, char *value) {
         pthread_cond_wait(&q->nfullCond, &q->mutex);
     }
 
-    node->value = strdup(value);
+    strncpy(node->value, value, strlen(value));
     node->next = NULL;
 
     if (q->tail == NULL) {
@@ -82,6 +80,7 @@ char * queue_dequeue(queue *q) {
     }
 
     char *value = node->value;
+
     free(node);
 
     q->size--;
@@ -170,6 +169,19 @@ void queue_print(queue *q) {
         node = node->next;
     }
     printf("\n");
+}
+
+void emptyQueue(queue *q) {
+    
+    queue_node *element, *nextElement;
+
+    element = q->head;
+    
+    while(element) {
+        nextElement = element->next;
+        free(element);
+        element = nextElement;
+    }
 }
 
 #endif

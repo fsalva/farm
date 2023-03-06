@@ -11,5 +11,6 @@ typedef struct file
 long compare_elements(file * a, file * b);
 
 file * createFile(char * filename, long res);
+void destroy_file(file * f);
 
 #endif

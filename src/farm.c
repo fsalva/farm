@@ -10,5 +10,7 @@
 
 int main(int argc, char * const argv[])
 {
+
+    fprintf(stderr, "MIO PID: %d", getpid());
     execv("bin/master", argv);
 }

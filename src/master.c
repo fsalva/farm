@@ -47,7 +47,9 @@ void sigint_handler(int signum) {
 void cleanup();
 
 queue feed_queue;
-queue initial_queue;
+
+FarmArguments * config = NULL;
+
 
 int main(int argc, char * const argv[])
 {   
@@ -61,7 +63,7 @@ int main(int argc, char * const argv[])
     sigaction(SIGUSR1, &sa, NULL);
 
     //TODO: Gestione con sigaction
-    sa.sa_handler = &handler_sigusr1;
+    sa.sa_handler = &sigint_handler;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
@@ -86,8 +88,6 @@ int main(int argc, char * const argv[])
     pthread_t * workers;
 
     // Argomenti opzionali inizializzati con valori default:
-    FarmArguments * config = NULL;
-
     config = malloc(sizeof(FarmArguments));
 
     config->farm_setup_threads_number = -1;
@@ -174,7 +174,8 @@ int main(int argc, char * const argv[])
     while(optind < argc) {
         // Inserisco gli altri file nella lista di file da elaborare: 
         char * file = strdup(argv[optind++]);
-        list_insert(config->farm_setup_file_list, file);            
+        list_insert(config->farm_setup_file_list, file);   
+        free(file);         
 
     }
 
@@ -192,6 +193,8 @@ int main(int argc, char * const argv[])
     
     pthread_create(&master, NULL, master_function, config);
 
+    fprintf(stderr, "IO ASPETTO EHHHH!");
+
     for (int i = 0; i < config->farm_setup_threads_number; i++) {
         pthread_join(workers[i], NULL);
 
@@ -203,8 +206,6 @@ int main(int argc, char * const argv[])
 
     free(workers);
 
-    free(config->farm_setup_directory_name);
-
     exit(0);
 }
 
@@ -215,10 +216,16 @@ void cleanup() {
 
     sleep(1);
 
+    emptyQueue(&feed_queue);
+    list_destroy(config->farm_setup_file_list);
+    free(config->farm_setup_directory_name);
+    free(config->farm_setup_file_list);
+    free(config);
+
     if(fatal_error) {
         kill(pid_child, SIGABRT);
     }
-    
+
     while ((wpid = waitpid(pid_child, &status, 0)) > 0)
     {
     }

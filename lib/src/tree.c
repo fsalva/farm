@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "../include/tree.h"
+#include "../include/file.h"
 
 tree * addChild(tree * root, file * f) {
 
@@ -10,7 +11,7 @@ tree * addChild(tree * root, file * f) {
         
         root = malloc(sizeof(tree));
 
-        root->f= createFile(f->filename, f->result);
+        root->f = f;
 
         root->left = NULL;
     
@@ -59,3 +60,14 @@ void treeprint(tree *root, int level)
         treeprint(root->right, level + 1);
 }
 
+void postOrderFree(tree * root){
+    if(root != NULL) {
+        postOrderFree( root->left );
+        postOrderFree( root->right );
+        
+        destroy_file(root->f);
+
+        free( root );
+        root = NULL;
+    }
+}

@@ -19,7 +19,7 @@ int list_insert(list *l, char * filename) {
     
     if(node->value == NULL) return -1;
 
-    node->value = strdup(filename);
+    strncpy(node->value, filename, strlen(filename));
     node->next = NULL;
 
     if (l->tail == NULL) {
@@ -73,4 +73,18 @@ void    list_print(list * l) {
         node = node->next;
     }
     printf("\n");
+}
+
+void list_destroy(list * l)
+{  
+    list_node *element, *nextElement;
+
+    element = l->head;
+    
+    while(element) {
+        nextElement = element->next;
+        free(element);
+        element = nextElement;
+    }
+    return;
 }

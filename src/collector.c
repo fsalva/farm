@@ -208,6 +208,8 @@ int main(int argc, char * const argv[])
     printTree(t);    
     //treeprint(t, 0);
 
+    postOrderFree(t);
+
     
     exit(11);
 }

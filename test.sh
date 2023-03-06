@@ -77,7 +77,7 @@ fi
 ./farm -n 1 -d testdir -q 1 -t 1000 file* 2>&1 > /dev/null &
 pid=$!
 sleep 5
-pkill farm
+pkill -f farm
 wait $pid
 if [[ $? != 0 ]]; then
     echo "test3 failed"

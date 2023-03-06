@@ -85,6 +85,8 @@ void* workers_function(void* arg) {
             running = 0;
         }
 
+        free(filename);
+
     }
     // Chiude la socket.
     close(sockfd);

@@ -39,8 +39,8 @@ void    recursive_file_walk_insert(char * dirname, list * l);
 
 void *  master_function ( void __attribute((unused)) * arg) {
     
-    FarmArguments * config = (FarmArguments * ) arg;
     char *  filename = NULL;
+    FarmArguments * config = (FarmArguments * ) arg;
 
     while (master_running)
     {
@@ -50,6 +50,8 @@ void *  master_function ( void __attribute((unused)) * arg) {
 
         queue_enqueue(&feed_queue, filename);
         usleep(config->farm_setup_delay_time * 1000);
+
+        free(filename);
     }
     
     for (int i = 0; i < config->farm_setup_threads_number; i++) {

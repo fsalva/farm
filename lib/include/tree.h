@@ -24,4 +24,7 @@ void printTree(tree * root);
 
 void treeprint(tree * root, int level);
 
+void postOrderFree(tree * root);
+
+
 #endif

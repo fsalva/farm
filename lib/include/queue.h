@@ -42,5 +42,7 @@ char * queue_dequeue_async_unsafe(queue *q);
 
 void queue_print(queue * q);
 
+void emptyQueue(queue *q);
+
 
 #endif

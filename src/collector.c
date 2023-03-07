@@ -29,16 +29,18 @@ int running = 1;
 tree * t = NULL;
 
 void sig_handler(int signum) {
-    
+    (void) signum;
     print_instantly = 1;
 
 }
 
 void int_handler(int signum){
+    (void) signum;    
     running = 0;
 }
 
 void abrt_handler(int signum){  // Per test.
+    (void) signum;
     _exit(EXIT_FAILURE);
 }
 
@@ -46,6 +48,9 @@ void server_run ();
 
 int main(int argc, char * const argv[])
 {
+    (void) argc;
+    (void) argv;
+
     struct sigaction sa = {0}; 
 
     sigset_t mask = {0};
@@ -76,7 +81,6 @@ int main(int argc, char * const argv[])
 
     tree_destroy(t);
 
-    
     exit(EXIT_SUCCESS);
 }
 

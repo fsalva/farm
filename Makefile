@@ -7,7 +7,7 @@ OBJ=obj
 BIN=bin
 LIBDIR=lib
 
-CFLAGS= -Wall -Werror -g -lpthread 
+CFLAGS= -Wall -Wextra -Werror -g -pthread 
 
 STATICLIB = lib/lib.a 
 
@@ -30,7 +30,7 @@ $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
 
 clean:
-	- rm -r bin/* obj/* tmp/* lib/obj/* lib/*.a testdir/* 
+	- rm bin/* obj/* tmp/* lib/obj/* lib/*.a testdir/* 
 	- rm file* 
 	- rm -r testdir
 	- rm collector expected.txt farm generafile master 

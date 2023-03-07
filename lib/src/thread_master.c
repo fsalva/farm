@@ -26,8 +26,6 @@
 #include "../include/macro.h"
 
 // Errore DT_DIR su file editor, in compilazione sparisce. 
-#define _GNU_SOURCE
-
 #define QUIT "QUIT"
 
 extern int master_running;

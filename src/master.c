@@ -32,19 +32,27 @@ int     running = 1;
 int     master_running = 1;
 int     fatal_error = 0;
 
-void sigpipe_handler(int signum) {}
+void sigpipe_handler(int signum) {
+    (void) signum;
+
+}
 
 // Invia al processo Collector un SIGUSR2 (Trigger stampa istantanea)
 void handler_sigusr1(int signum) {
+    (void) signum;
     if(pid_child > 0)
         kill(pid_child, SIGUSR2);
 }
 
 void sigint_handler(int signum) {
+    (void) signum;
     master_running = 0;
 }
 
-void ignore_sigpipe(int signum) {}
+void ignore_sigpipe(int signum) {
+    (void) signum;
+
+}
 
 void cleanup();
 
@@ -55,6 +63,7 @@ FarmArguments * config = NULL;
 
 int main(int argc, char * const argv[])
 {   
+
     atexit(cleanup);
 
     struct sigaction sa = {0}; 

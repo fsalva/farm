@@ -175,6 +175,7 @@ int main(int argc, char * const argv[])
     while(optind < argc) {
         // Inserisco gli altri file nella lista di file da elaborare: 
         char * file = strdup(argv[optind++]);
+        // TODO: Controllare se sono file regolari qui.
         list_insert(config->farm_setup_file_list, file);   
         free(file);         
 
@@ -199,9 +200,6 @@ int main(int argc, char * const argv[])
 
     }
     pthread_join(master, NULL);
-
-
-    
 
     free(workers);
 

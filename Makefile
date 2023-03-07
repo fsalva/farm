@@ -7,7 +7,7 @@ OBJ=obj
 BIN=bin
 LIBDIR=lib
 
-CFLAGS=-Wall -g -lpthread 
+CFLAGS= -Wall -Werror -g -lpthread 
 
 STATICLIB = lib/lib.a 
 

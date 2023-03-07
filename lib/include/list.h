@@ -2,7 +2,7 @@
 #define _FARM_LIST_H_
 
 typedef struct list_node {
-    char *value;  // Pointer to the character array
+    char *value; 
     struct list_node *next;
 } list_node;
 

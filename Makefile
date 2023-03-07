@@ -11,7 +11,7 @@ CFLAGS= -Wall -Wextra -Werror -g -pthread
 
 STATICLIB = lib/lib.a 
 
-all: clean $(STATICLIB) $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
+all: clean prepare $(STATICLIB) $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
 
 obj/%.o: src/%.c $(STATICLIB)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -49,5 +49,10 @@ test: all
 	- cp bin/* .
 	- chmod +x test.sh && ./test.sh
 
+prepare: 
+	- mkdir obj
+	- mkdir bin
+	- mkdir tmp
+	- mkdir lib/obj
 
 .PHONY: all clean push valgrind test

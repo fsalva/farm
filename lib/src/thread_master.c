@@ -13,7 +13,7 @@
 #include <sys/time.h>
 #include <sys/syscall.h>
 #include <dirent.h>
-#include <limits.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <errno.h>
 
@@ -61,36 +61,35 @@ void recursive_file_walk_insert(char * dirname, list * l) {
 
     DIR *dir = {0};
     struct dirent *entry = {0};
+    struct stat info = {0};
+
     char path[MAX_MSG_SIZE];
 
     if (!(dir = opendir(dirname)))
         return;
 
     while ((entry = readdir(dir)) != NULL && master_running) {
+        
+        snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
 
-        if (entry->d_type == DT_DIR) {
+        if(stat(path, &info) != 1) {
 
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+            if (S_ISDIR(info.st_mode)) {  //TODO #5 Rendere Posixs
 
-            snprintf(path, sizeof(path), "%s/%s", dirname, entry->d_name);
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
-            recursive_file_walk_insert(path, l);
+                recursive_file_walk_insert(path, l);
 
-        } 
-        else {
-
-            char fullpath[MAX_MSG_SIZE];
-
-            snprintf(fullpath, sizeof(fullpath), "%s/%s", dirname, entry->d_name);
-
-            list_insert(l, fullpath);
-
+            } 
+            else if(S_ISREG(info.st_mode))
+            {
+                list_insert(l, path);
             }
-            
         }
-
+        else { // Gestione errore
+            perror("stat() :");
+        }
+    }
     closedir(dir);
-    
-
 }
-    
+

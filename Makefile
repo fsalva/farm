@@ -50,9 +50,6 @@ test: all
 	- chmod +x test.sh && ./test.sh
 
 prepare: 
-	- mkdir obj
-	- mkdir bin
-	- mkdir tmp
-	- mkdir lib/obj
+	- mkdir obj bin tmp lib/obj
 
-.PHONY: all clean push valgrind test
+.PHONY: all clean push valgrind test prepare

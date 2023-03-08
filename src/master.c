@@ -6,6 +6,7 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #include <pthread.h>
 #include <errno.h>
@@ -179,13 +180,23 @@ int main(int argc, char * const argv[])
 
     }   
 
+    struct stat info = {0};
+
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. 
     // Controllo quindi che optind sia inferiore di argc)
     while(optind < argc) {
         // Inserisco gli altri file nella lista di file da elaborare: 
         char * file = strdup(argv[optind++]);
-        // TODO: Controllare se sono file regolari qui.
-        list_insert(config->farm_setup_file_list, file);   
+
+        if(stat(file, &info) != -1) {    
+            if(S_ISREG(info.st_mode)) {
+                list_insert(config->farm_setup_file_list, file);   
+            } 
+        }
+        else { // Gestione errore:
+            perror("stat(): ");
+        }
+        
         free(file);         
 
     }

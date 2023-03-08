@@ -4,7 +4,7 @@
 int main(int argc, char * const argv[])
 {   
     (void) argc;
-    execv("bin/master", argv);
+    execv("bin/masterworker", argv);
 
     // Errore di execv
     return -1;

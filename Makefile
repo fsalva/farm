@@ -11,7 +11,7 @@ CFLAGS= -Wall -Wextra -Werror -g -pthread
 
 STATICLIB = lib/lib.a 
 
-all: clean prepare $(STATICLIB) $(BIN)/farm $(BIN)/master $(BIN)/collector $(BIN)/generafile   
+all: clean prepare $(STATICLIB) $(BIN)/farm $(BIN)/masterworker $(BIN)/collector $(BIN)/generafile   
 
 obj/%.o: src/%.c $(STATICLIB)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -19,8 +19,8 @@ obj/%.o: src/%.c $(STATICLIB)
 $(BIN)/farm: $(OBJ)/farm.o $(STATICLIB)
 	$(CC) $(CFLAGS) $(OBJ)/farm.o -o $@ 
 
-$(BIN)/master: $(OBJ)/master.o $(STATICLIB)
-	$(CC) $(CFLAGS) $(OBJ)/master.o  -o $@ $(STATICLIB)
+$(BIN)/masterworker: $(OBJ)/masterworker.o $(STATICLIB)
+	$(CC) $(CFLAGS) $(OBJ)/masterworker.o  -o $@ $(STATICLIB)
 
 
 $(BIN)/collector: $(OBJ)/collector.o $(STATICLIB) 
@@ -33,7 +33,7 @@ clean:
 	- rm bin/* obj/* tmp/* lib/obj/* lib/*.a testdir/* 
 	- rm file* 
 	- rm -r testdir
-	- rm collector expected.txt farm generafile master 
+	- rm collector expected.txt farm generafile masterworker
 
 push:
 	git add .

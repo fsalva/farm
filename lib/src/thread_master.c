@@ -29,7 +29,7 @@
 // Errore DT_DIR su file editor, in compilazione sparisce. 
 #define QUIT "QUIT"
 
-extern sig_atomic_t master_running;
+extern volatile sig_atomic_t master_running;
 extern queue feed_queue;
 
 void    recursive_file_walk_insert(char * dirname, list * l);
@@ -46,8 +46,20 @@ void *  master_function (void * arg) {
     char *  filename = NULL;
     FarmArguments * config = (FarmArguments * ) arg;
 
-    //  Timer da 10^6 * Delay (Uso nanosleep 10^-9)  
-    struct timespec timer = {0, config->farm_setup_delay_time * 1000000L};
+    struct timespec timer; 
+    
+    //  Nanosleep funziona solo da 0 a 999.999.999 nsec.   
+    if (config->farm_setup_delay_time < 1000) {
+        timer.tv_sec    = 0;
+        timer.tv_nsec   = config->farm_setup_delay_time * MILLION;
+    } 
+    else {
+        timer.tv_sec    = config->farm_setup_delay_time / 1000;
+        timer.tv_nsec   = (config->farm_setup_delay_time - timer.tv_sec * 1000) * MILLION;
+    }
+    
+    fprintf(stderr, "Timer msec: %ld\nTimer nanosec: %ld", config->farm_setup_delay_time, timer.tv_nsec);
+
 
     while (master_running)
     {

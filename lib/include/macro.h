@@ -5,3 +5,4 @@
 #define FATAL_ERROR             fatal_error = 1;
 #define SOCK_PATH "tmp/farm.sck"
 #define MAXCONN 100
+#define MILLION 1000000L

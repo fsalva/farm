@@ -21,7 +21,7 @@
 
 int             pid_child = -1;
 int             fatal_error = 0;
-sig_atomic_t    master_running = 1;
+volatile sig_atomic_t    master_running = 1;
 
 // Invia al processo Collector un SIGUSR2 (Trigger stampa istantanea)
 void handler_sigusr1(int signum) {

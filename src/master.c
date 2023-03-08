@@ -119,7 +119,7 @@ int main(int argc, char * const argv[])
 
             case 't':
                 config->farm_setup_delay_time = strtol(optarg, NULL, 10);
-                if(config->farm_setup_delay_time <= 0 || errno == ERANGE) {
+                if(config->farm_setup_delay_time < 0 || errno == ERANGE) {
                     PRINT_USAGE_HELP
                     FATAL_ERROR
                     exit(EXIT_FAILURE);

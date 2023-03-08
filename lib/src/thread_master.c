@@ -34,10 +34,19 @@ extern queue feed_queue;
 
 void    recursive_file_walk_insert(char * dirname, list * l);
 
+/**
+ * @brief Funzione del thread master: 
+ *      Inserisce nella coda condivisa i file, quando finisce termina se stesso e i thread worker.
+ * 
+ * @param arg i parametri di configurazione a riga di comando ricevuti precedentemente.  
+ * @return void* NULL
+ */
 void *  master_function (void * arg) {
     
     char *  filename = NULL;
     FarmArguments * config = (FarmArguments * ) arg;
+
+    struct timespec timer = {0, config->farm_setup_delay_time * 1000000L};
 
     while (master_running)
     {
@@ -46,7 +55,7 @@ void *  master_function (void * arg) {
         if(filename == NULL) break;
 
         queue_enqueue(&feed_queue, filename);
-        usleep(config->farm_setup_delay_time * 1000);
+        nanosleep(&timer, NULL);
 
         free(filename);
     }
@@ -58,6 +67,14 @@ void *  master_function (void * arg) {
     return NULL;
 }
 
+/**
+ * @brief Scorre ricorsivamente tutti i files e tutte le directory (ed il loro contenuto)
+ *  A partire dalla cartella dirname. 
+ *  Inserisce i nomi dei file trovati nella lista l.
+ * 
+ * @param dirname 
+ * @param l 
+ */
 void recursive_file_walk_insert(char * dirname, list * l) {
 
     DIR *dir = {0};

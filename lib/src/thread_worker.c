@@ -16,10 +16,28 @@
 #include "../include/queue.h"
 #include "../include/macro.h"
 
+/**
+ * @brief Funzione dei thread:
+ *  Crea un server socket e si mette in ascolto di files in arrivo.
+ *  Esegue dei calcoli e mantiene una struttura ad albero per garantire
+ *  l'ordinamento con una visita in-order. 
+ * 
+ * @param arg (la coda)
+ * @return NULL in uscita. 
+ */
 void* workers_function(void* arg) {
 
     int running = 1;
+
     queue * q = (queue * ) arg;
+
+    // Dimensione del Buffer:  
+    //
+    // N. Cifre MAX Long su sistemi a 64 bit: 2^64  :   20 + 
+    // Dimensisone MAX di path                      :  255 +
+    // Carattere di terminazione                    :    1 =
+    // ------------------------------------------------------
+    //                                                 276  
 
     char buf[MAX_MSG_SIZE];
 
@@ -43,6 +61,7 @@ void* workers_function(void* arg) {
 
         filename = queue_dequeue(q);
 
+        // Pulisce il buffer: 
         memset(buf, 0, MAX_MSG_SIZE);
 
         if(strcmp(filename, QUIT) != 0) {
@@ -56,17 +75,20 @@ void* workers_function(void* arg) {
 
             int checkv;
 
+            // Se scrivo su socket, e il server è spento: 
             if((checkv = writen(sockfd, buf, MAX_MSG_SIZE)) < 0) {
-                running = 0; 
+                running = 0;    // Si spegne
                 close(sockfd);
                 break; 
             }
             
         }
         else {
+            // Se ricevo il task di terminazione:
+            // Invio -1 al Collector (+ "QUIT"). 
             sprintf(buf, "%d%s", -1, QUIT);
             writen(sockfd, buf, MAX_MSG_SIZE);
-            running = 0;
+            running = 0;    // Ed esco: 
         }
 
         free(filename);
@@ -81,7 +103,12 @@ void* workers_function(void* arg) {
 
 
 
-
+/**
+ * @brief Legge 8 bytes (sizeof(long)) alla volta e li somma.
+ * 
+ * @param filename path del file da elaborare
+ * @return long il valore calcolato del file.
+ */
 long sum_longs_from_file(const char *filename) {
 
     int fd;
@@ -90,18 +117,21 @@ long sum_longs_from_file(const char *filename) {
     int i = 0;
     ssize_t bytes_read;
 
-    fd = open(filename, O_RDONLY); // open the file for reading
+    // Apro il file in lettura: 
+    fd = open(filename, O_RDONLY); 
     if (fd < 0) {
         return -1;
     }
 
+    // Leggo su variabile long 'number' il contenuto del file:  
+    // Finché leggo 8 bytes:
     while ((bytes_read = read(fd, &number, sizeof(long))) == sizeof(long)) {
-        sum += number * i;
+        sum += number * i;  // Faccio il calcolo
         i++;
     }
 
 
-    close(fd); // close the file
+    close(fd); // Chiudo il file. 
     return sum;
 
 }

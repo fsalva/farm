@@ -58,8 +58,6 @@ void *  master_function (void * arg) {
         timer.tv_nsec   = (config->farm_setup_delay_time - timer.tv_sec * 1000) * MILLION;
     }
     
-    fprintf(stderr, "Timer msec: %ld\nTimer nanosec: %ld", config->farm_setup_delay_time, timer.tv_nsec);
-
 
     while (master_running)
     {

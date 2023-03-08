@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/un.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -28,12 +29,12 @@
 // Errore DT_DIR su file editor, in compilazione sparisce. 
 #define QUIT "QUIT"
 
-extern int master_running;
+extern sig_atomic_t master_running;
 extern queue feed_queue;
 
 void    recursive_file_walk_insert(char * dirname, list * l);
 
-void *  master_function ( void __attribute((unused)) * arg) {
+void *  master_function (void * arg) {
     
     char *  filename = NULL;
     FarmArguments * config = (FarmArguments * ) arg;
@@ -74,7 +75,7 @@ void recursive_file_walk_insert(char * dirname, list * l) {
 
         if(stat(path, &info) != 1) {
 
-            if (S_ISDIR(info.st_mode)) {  //TODO #5 Rendere Posixs
+            if (S_ISDIR(info.st_mode)) {
 
                 if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 

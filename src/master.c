@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/wait.h>
 #include <string.h>
 #include <sys/un.h>
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -17,26 +17,11 @@
 #include "../lib/include/thread_worker.h"
 #include "../lib/include/arguments.h"
 #include "../lib/include/list.h"
+#include "../lib/include/macro.h"
 
-#define SOCK_PATH "tmp/farm.sck"  
-#define QUIT "QUIT"
-#define MAX_MSG_SIZE 276
-
-#define PRINT_USAGE_HELP        fprintf(stderr, "Usage: %s [-n nthread] [-q queue length] [-d directory name] [-t time delay]\n", argv[0]);
-#define FATAL_ERROR             fatal_error = 1;
-
-void    read_files_rec(char * dirname, queue * q, int delay);
-long    sum_longs_from_file(const char *filename);
-
-int     pid_child = -1;
-int     running = 1;
-int     master_running = 1;
-int     fatal_error = 0;
-
-void sigpipe_handler(int signum) {
-    (void) signum;
-
-}
+int             pid_child = -1;
+int             fatal_error = 0;
+sig_atomic_t    master_running = 1;
 
 // Invia al processo Collector un SIGUSR2 (Trigger stampa istantanea)
 void handler_sigusr1(int signum) {
@@ -50,10 +35,7 @@ void sigint_handler(int signum) {
     master_running = 0;
 }
 
-void ignore_sigpipe(int signum) {
-    (void) signum;
-
-}
+void ignore_sigpipe(int signum) { (void) signum; }
 
 void cleanup();
 
@@ -64,7 +46,6 @@ FarmArguments * config = NULL;
 
 int main(int argc, char * const argv[])
 {   
-
     atexit(cleanup);
 
     struct sigaction sa = {0}; 
@@ -73,7 +54,6 @@ int main(int argc, char * const argv[])
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &sa, NULL);
 
-    //TODO: Gestione con sigaction
     sa.sa_handler = &sigint_handler;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
@@ -107,8 +87,8 @@ int main(int argc, char * const argv[])
     config->farm_setup_queue_length   = -1;
     config->farm_setup_directory_name = NULL;
     config->farm_setup_file_list = malloc(sizeof(list));
-    
-    while((opt = getopt(argc, argv, "n:q:d:t:")) != -1) {   //TODO: #3 Controllare il numero degli argomenti, deve essere > 3 se -d non è settata.
+
+    while((opt = getopt(argc, argv, "n:q:d:t:")) != -1) {
         
         switch (opt) {
             case 'n':
@@ -153,11 +133,6 @@ int main(int argc, char * const argv[])
         }
     }
 
-    /*
-    
-    
-    */
-    
     if(config->farm_setup_queue_length == -1 ) 
         config->farm_setup_queue_length = 8;
 
@@ -214,6 +189,7 @@ int main(int argc, char * const argv[])
     }
     
     pthread_create(&master, NULL, master_function, config);
+
 
     for (int i = 0; i < config->farm_setup_threads_number; i++) {
         pthread_join(workers[i], NULL);

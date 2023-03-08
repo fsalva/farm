@@ -23,8 +23,8 @@
 
 #define MAX_MSG_SIZE 276
 
-int print_instantly = 0;
-int running = 1;
+sig_atomic_t print_instantly = 0;
+sig_atomic_t running = 1;
 
 tree * t = NULL;
 
@@ -58,9 +58,11 @@ int main(int argc, char * const argv[])
     // Imposta l'handler per il segnale USR2 (Inviato da Master-Worker)
     sa.sa_handler = &sig_handler;
 
+    // Imposta il flag per evitare di essere interrotti 
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR2, &sa, NULL);
 
+    // Per testare: 
     sa.sa_handler = &abrt_handler;
     sigaction(SIGABRT, &sa, NULL);
 
@@ -75,10 +77,13 @@ int main(int argc, char * const argv[])
 
     sigprocmask(SIG_SETMASK, &mask, NULL);
 
+    // Esegue il server: 
     server_run();
 
+    // Stampa l'albero all'uscita: 
     tree_print(t);    
 
+    // Pulisce la memoria: 
     tree_destroy(t);
 
     exit(EXIT_SUCCESS);
@@ -98,12 +103,13 @@ void server_run () {
     fd_set current_sockets;
     fd_set ready_sockets;
 
+    // Creazione Socket:
+    //
     struct sockaddr_un psa;
     memset(&psa, 0, sizeof(psa));
+
     psa.sun_family = AF_UNIX;
     strcpy(psa.sun_path, SOCK_PATH);
-
-
 
     if((fd_sk = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
         perror("Socket: "); 
@@ -120,8 +126,7 @@ void server_run () {
         exit(EXIT_FAILURE);
     }
 
-    
-
+    // All'inizio, controlla fino alla socket del server:     
     max_socket = fd_sk;
     FD_ZERO(&current_sockets);
     FD_SET(fd_sk, &current_sockets);
@@ -129,15 +134,16 @@ void server_run () {
     int nfd;
 
     while (running) {
-
+        // Copia il set: 
         ready_sockets = current_sockets;
 
         if((nfd = select(max_socket + 1, &ready_sockets, NULL, NULL, NULL)) < 0) {
-
+            // Se la select fallisce per via di un'interruzione, continua: 
             if(errno == EINTR) {
                 continue;
             } 
             
+            // Altrimenti esci: 
             perror("Select: ");
             unlink(SOCK_PATH);
             exit(EXIT_FAILURE);
@@ -146,7 +152,8 @@ void server_run () {
         else {
 
             for ( fd = 0; fd < max_socket + 1; fd++) {
-                
+
+                // Controlla all'inizio del ciclo se bisogna stampare:                 
                 if(print_instantly) {
                     tree_print(t);
                     print_instantly = 0;
@@ -159,6 +166,7 @@ void server_run () {
                         
                         fd_c = accept(fd, NULL, 0);
 
+                        // Incrementa il contatore delle socket attive: 
                         current_sockets_number++;
 
                         FD_SET(fd_c, &current_sockets);
@@ -180,6 +188,7 @@ void server_run () {
                         receivedLong = strtol(buf, &restOfTheString, 10);
 
                         if(receivedLong <= 0) { // Uno dei thread worker si è spento.
+                            // Decrementa il contatore delle socket attive: 
                             current_sockets_number--;
                             FD_CLR(fd, &current_sockets);
                             close(fd);
@@ -195,11 +204,12 @@ void server_run () {
                             // Creo il file: 
                             file * f = file_create(restOfTheString, receivedLong);
                             
-                            // Lo aggiungo ad un albero binario: 
-                            t = tree_add_node(t, f);
+                            if(f != NULL) {
+                                // Lo aggiungo ad un albero binario: 
+                                t = tree_add_node(t, f);
 
-                            memset(buf, 0, MAX_MSG_SIZE);
-
+                                memset(buf, 0, MAX_MSG_SIZE);
+                            }
                         }
                     }
                 }

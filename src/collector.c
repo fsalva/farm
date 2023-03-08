@@ -13,15 +13,7 @@
 #include "../lib/include/msg.h"
 #include "../lib/include/tree.h"
 #include "../lib/include/file.h"
-
-
-#define SOCK_PATH "tmp/farm.sck"
-#define MAXCONN 100
-
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-
-#define MAX_MSG_SIZE 276
+#include "../lib/include/macro.h"
 
 sig_atomic_t print_instantly = 0;
 sig_atomic_t running = 1;
@@ -31,7 +23,6 @@ tree * t = NULL;
 void sig_handler(int signum) {
     (void) signum;
     print_instantly = 1;
-
 }
 
 void int_handler(int signum){

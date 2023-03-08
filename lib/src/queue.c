@@ -9,7 +9,7 @@
 
 #include "../include/queue.h"
 
-
+// Inizializzo la coda, le due condition variables e la mutex: 
 void queue_init(queue *q, int capacity) {
 
     q->capacity = capacity;
@@ -24,7 +24,9 @@ void queue_init(queue *q, int capacity) {
     q->tail = NULL;
 }
 
-// Enqueues a new element at the end of the queue
+// Inserisco un nuovo elemento nella coda
+// Se e solo se ho spazio disponibile
+// (altrimenti attendo che si liberi spazio)
 int queue_enqueue(queue *q, char *value) {
 
     pthread_mutex_lock(&q->mutex);
@@ -34,6 +36,7 @@ int queue_enqueue(queue *q, char *value) {
     node->value = calloc(strlen(value) + 1, sizeof(char));
     if(!node->value) return -1;
 
+    // Attendo che si liberi spazio: 
     while(q->capacity - q->size == 0) {
         pthread_cond_wait(&q->nfullCond, &q->mutex);
     }
@@ -51,10 +54,10 @@ int queue_enqueue(queue *q, char *value) {
         q->tail = node;
     }
 
-
     q->size++;
 
-    
+    // Ho appena inserito un elemento, segnalo che la lista non è vuota,
+    // (Chi è in attesa di prelevare elementi viene svegliato)
     pthread_cond_signal(&q->nemptyCond);
 
     pthread_mutex_unlock(&q->mutex);
@@ -62,11 +65,14 @@ int queue_enqueue(queue *q, char *value) {
     return 0;
 }
 
+// Prelevo un elemento dalla coda
+// Solo se la coda non è vuota.
+// (altrimenti attendo che si riempia di almeno un elemento)
 char * queue_dequeue(queue *q) {
 
     pthread_mutex_lock(&(q->mutex));
 
-
+    // Attendo che la coda si popoli: 
     while(q->size == 0) {
         pthread_cond_wait(&q->nemptyCond, &q->mutex);
     }
@@ -85,6 +91,9 @@ char * queue_dequeue(queue *q) {
 
     q->size--;
 
+    // Ho tolto un elemento, vuol dire che la 
+    // coda sicuramente non è vuota.
+    // (Permette di eseguire la enqueue())
     pthread_cond_signal(&(q->nfullCond));
     
     pthread_mutex_unlock(&(q->mutex));
@@ -93,29 +102,7 @@ char * queue_dequeue(queue *q) {
     return value;
 }
 
-
-int isEmptyQ(queue * head) {
-
-    //pthread_mutex_lock(&(head->mutex));
-
-    int retval = head == NULL ? 1 : 0;
-
-    //pthread_mutex_unlock(&(head->mutex));
-
-
-    return retval;
-}
-
-void queue_print(queue *q) {
-    queue_node *node = q->head;
-    while (node != NULL) {
-        printf("%s ", node->value);
-        node = node->next;
-    }
-    printf("\n");
-}
-
-void emptyQueue(queue *q) {
+void queue_empty(queue *q) {
     
     queue_node *element, *nextElement;
 

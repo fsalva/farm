@@ -39,7 +39,7 @@ void int_handler(int signum){
     running = 0;
 }
 
-void abrt_handler(int signum){  // Per test.
+void abrt_handler(int signum){  // In caso di errore fatale.
     (void) signum;
     _exit(EXIT_FAILURE);
 }

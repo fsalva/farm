@@ -48,18 +48,22 @@ int main(int argc, char * const argv[])
 {   
     atexit(cleanup);
 
+    //Registra tutti i segnali con rispettivi handlers: 
     struct sigaction sa = {0}; 
 
+    // STAMPA ISTANTANEA (SIGUSR1) : 
     sa.sa_handler = &handler_sigusr1;
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &sa, NULL);
 
+    // TERMINAZIONE (INT - QUIT - TERM - HUP): 
     sa.sa_handler = &sigint_handler;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGHUP, &sa, NULL);
 
+    // IGNORA (SIGPIPE)
     sa.sa_handler = &ignore_sigpipe;
     sigaction(SIGPIPE, &sa, NULL);
     
@@ -73,7 +77,6 @@ int main(int argc, char * const argv[])
     }
     
 
-    int opt; 
     
     // Thread:
     pthread_t   master;
@@ -87,6 +90,8 @@ int main(int argc, char * const argv[])
     config->farm_setup_queue_length   = -1;
     config->farm_setup_directory_name = NULL;
     config->farm_setup_file_list = malloc(sizeof(list));
+
+    int opt; 
 
     while((opt = getopt(argc, argv, "n:q:d:t:")) != -1) {
         
@@ -133,16 +138,21 @@ int main(int argc, char * const argv[])
         }
     }
 
+    // Non ho cambiato i valori di default della qlen: 
     if(config->farm_setup_queue_length == -1 ) 
         config->farm_setup_queue_length = 8;
 
-    // Istanzio coda    
+    // Istanzio coda dei task:
     queue_init(&feed_queue, config->farm_setup_queue_length);
+    
+    // Istanzio coda di lettura dei file: 
     list_init(config->farm_setup_file_list);
 
+    // Non ho cambiato i valori di default del delay: 
     if(config->farm_setup_delay_time   == -1 ) 
         config->farm_setup_delay_time = 0;
 
+    // Non ho indicato alcuna directory: 
     if(config->farm_setup_directory_name == NULL) {
         if(argc - optind <= 0) {
             PRINT_USAGE_HELP
@@ -158,13 +168,15 @@ int main(int argc, char * const argv[])
     struct stat info = {0};
 
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. 
-    // Controllo quindi che optind sia inferiore di argc)
+    // Finché ho elementi (optind < argc)
     while(optind < argc) {
         // Inserisco gli altri file nella lista di file da elaborare: 
         char * file = strdup(argv[optind++]);
 
         if(stat(file, &info) != -1) {    
+            // Se ho a che fare con un file regolare: 
             if(S_ISREG(info.st_mode)) {
+                // Lo inserisco nella lista dei file: 
                 list_insert(config->farm_setup_file_list, file);   
             } 
         }
@@ -176,30 +188,32 @@ int main(int argc, char * const argv[])
 
     }
 
-
-
+    // Se non ho indicato il numero di threads: 
     if(config->farm_setup_threads_number == -1 ) 
         config->farm_setup_threads_number = 4;    
 
-    // Creo Workers thread
+    // Creo Threadpool di workers: 
     workers = malloc(sizeof(pthread_t) * config->farm_setup_threads_number);
 
     for(int i = 0; i < config->farm_setup_threads_number; i++) {
         pthread_create(&workers[i], NULL, workers_function, &feed_queue); 
     }
     
+    // Creo master thread: 
     pthread_create(&master, NULL, master_function, config);
 
-
+    // Attendo la terminazione dei workers: 
     for (int i = 0; i < config->farm_setup_threads_number; i++) {
         pthread_join(workers[i], NULL);
 
     }
+
+    // Attendo la terminazione del master: 
     pthread_join(master, NULL);
 
     free(workers);
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 void cleanup() {
@@ -207,14 +221,15 @@ void cleanup() {
     int status = 0;  
     int wpid;
 
-    //sleep(1);
 
-    emptyQueue(&feed_queue);
+    // Faccio pulizia: 
+    queue_empty(&feed_queue);
     list_destroy(config->farm_setup_file_list);
     free(config->farm_setup_directory_name);
     free(config->farm_setup_file_list);
     free(config);
 
+    // Se fallisco prima di iniziare l'esecuzione dei thread: 
     if(fatal_error) {
         kill(pid_child, SIGABRT);
     }

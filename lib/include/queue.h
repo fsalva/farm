@@ -32,13 +32,11 @@ void queue_init(queue *q, int qlen);
 
 int queue_enqueue(queue *q, char *value);
 
-int isEmptyQ( queue * head);
-
 char * queue_dequeue(queue *q);
 
 void queue_print(queue * q);
 
-void emptyQueue(queue *q);
+void queue_empty(queue *q);
 
 
 #endif

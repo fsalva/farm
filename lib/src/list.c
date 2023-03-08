@@ -23,11 +23,9 @@ int list_insert(list *l, char * filename) {
     node->next = NULL;
 
     if (l->tail == NULL) {
-        // The list is empty
         l->head = node;
         l->tail = node;
     } else {
-        // Add the element to the end of the list
         l->tail->next = node;
         l->tail = node;
     }

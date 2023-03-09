@@ -15,8 +15,8 @@
 #include "../lib/include/file.h"
 #include "../lib/include/macro.h"
 
-sig_atomic_t print_instantly = 0;
-sig_atomic_t running = 1;
+volatile sig_atomic_t print_instantly = 0;
+volatile sig_atomic_t running = 1;
 
 tree * t = NULL;
 

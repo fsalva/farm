@@ -26,6 +26,7 @@ $(BIN)/masterworker: $(OBJ)/masterworker.o $(STATICLIB)
 $(BIN)/collector: $(OBJ)/collector.o $(STATICLIB) 
 	$(CC) $(CFLAGS) $(OBJ)/collector.o -o $@ $(STATICLIB)
 
+
 $(BIN)/generafile: $(OBJ)/generafile.o
 	$(CC) $(CFLAGS) $(OBJ)/generafile.o -o $@ 
 
@@ -49,7 +50,13 @@ test: all
 	- cp bin/* .
 	- chmod +x test.sh && ./test.sh
 
+
+
+usr1test: all
+	- cp bin/* .
+	- chmod +x testUSR1.sh && ./testUSR1.sh
+
 prepare: 
 	- mkdir obj bin tmp lib/obj
 
-.PHONY: all clean push valgrind test prepare
+.PHONY: all clean push valgrind test prepare usr1test

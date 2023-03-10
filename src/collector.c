@@ -16,13 +16,15 @@
 #include "../lib/include/macro.h"
 
 volatile sig_atomic_t print_instantly = 0;
+volatile sig_atomic_t prints_total = 0;
 volatile sig_atomic_t running = 1;
 
 tree * t = NULL;
 
 void sig_handler(int signum) {
     (void) signum;
-    print_instantly = 1;
+    print_instantly++;
+    prints_total++;
 }
 
 void int_handler(int signum){
@@ -77,6 +79,8 @@ int main(int argc, char * const argv[])
     // Pulisce la memoria: 
     tree_destroy(t);
 
+    fprintf(stdout, "SIGUSR HANDLED TOTAL: %d\n", prints_total);
+
     exit(EXIT_SUCCESS);
 }
 
@@ -88,6 +92,7 @@ void server_run () {
     int fd_sk; 
     int max_socket = 0;             // Ottimizza ciclo select
     int current_sockets_number = 0; // Controlla se ci sono socket client ancora attive. 
+    
 
     char buf[MAX_MSG_SIZE];
 
@@ -145,9 +150,11 @@ void server_run () {
             for ( fd = 0; fd < max_socket + 1; fd++) {
 
                 // Controlla all'inizio del ciclo se bisogna stampare:                 
-                if(print_instantly) {
+                if(print_instantly > 0) {
                     tree_print(t);
-                    print_instantly = 0;
+                    fprintf(stdout, "\n");
+                    print_instantly--;
+                    
                 }
 
                 if(FD_ISSET(fd, &ready_sockets)) {
@@ -167,7 +174,7 @@ void server_run () {
                     
                     // Caso 2: Pronto in lettura: 
                     else { 
-                                                
+                        
                         if(readn(fd, buf, MAX_MSG_SIZE) <= 0) {
                             FD_CLR(fd, &current_sockets);
                             close(fd);

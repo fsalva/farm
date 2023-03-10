@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 ssize_t  /* Read "n" bytes from a descriptor */
 readn(int fd, void *ptr, size_t n) {  
@@ -31,11 +32,15 @@ writen(int fd, void *ptr, size_t n) {
    nleft = n;
    while (nleft > 0) {
       if((nwritten = write(fd, ptr, nleft)) < 0) {
-         if (nleft == n) return -1; /* error, return -1 */
-         else break; /* error, return amount written so far */
+         if(nwritten == -1) {
+            if(errno == EINTR) continue;
+            return -1;
+         }
       } else if (nwritten == 0) break; 
-   nleft -= nwritten;
-   ptr   += nwritten;
+      
+      nleft -= nwritten;
+      
+      ptr   += nwritten;
    }
    
    return(n - nleft); /* return >= 0 */

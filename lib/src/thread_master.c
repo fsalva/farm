@@ -68,8 +68,17 @@ void *  master_function (void * arg) {
         // Accoda un file per i thread worker: 
         queue_enqueue(&feed_queue, filename);
 
-        //Attende lo scadere di "delay" msec: 
-        nanosleep(&timer, NULL);
+        errno = 0;
+        //Attende lo scadere di "delay" msec:
+        // Se nanosleep viene interrotta da un signal, 
+        // usando il flag SA_RESTART la funzione riparte, 
+        // ma controllo che sia stata interrotta proprio con errno: EINTR.
+        while (nanosleep(&timer, &timer) && errno == EINTR);
+
+        if(errno != 0 && errno != EINTR) { 
+            free(filename);
+            break;
+        }
 
         free(filename);
     }

@@ -56,8 +56,6 @@ int main(int argc, char * const argv[])
 {   
     atexit(cleanup);
 
-    fprintf(stderr, "PID: %d\n", getpid());
-
     //Registra tutti i segnali con rispettivi handlers: 
     struct sigaction sa = {0}; 
 

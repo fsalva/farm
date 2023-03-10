@@ -16,7 +16,6 @@
 #include "../lib/include/macro.h"
 
 volatile sig_atomic_t print_instantly = 0;
-volatile sig_atomic_t prints_total = 0;
 volatile sig_atomic_t running = 1;
 
 tree * t = NULL;
@@ -24,7 +23,6 @@ tree * t = NULL;
 void sig_handler(int signum) {
     (void) signum;
     print_instantly++;
-    prints_total++;
 }
 
 void int_handler(int signum){
@@ -78,8 +76,6 @@ int main(int argc, char * const argv[])
 
     // Pulisce la memoria: 
     tree_destroy(t);
-
-    fprintf(stdout, "SIGUSR HANDLED TOTAL: %d\n", prints_total);
 
     exit(EXIT_SUCCESS);
 }

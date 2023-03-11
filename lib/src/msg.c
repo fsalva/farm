@@ -1,5 +1,5 @@
 /**
- * Funzione fornita nella scorsa sessione di laboratorio.
+ * Tratta da Advanced Programming in the Unix Environment.
  */
 
 #include <stdio.h>
@@ -15,6 +15,7 @@ readn(int fd, void *ptr, size_t n) {
    nleft = n;
    while (nleft > 0) {
       if((nread = read(fd, ptr, nleft)) < 0) {
+         if(errno == EINTR) continue; 
          if (nleft == n) return -1; /* error, return -1 */
          else break; /* error, return amount read so far */
       } else if (nread == 0) break; /* EOF */
@@ -32,10 +33,8 @@ writen(int fd, void *ptr, size_t n) {
    nleft = n;
    while (nleft > 0) {
       if((nwritten = write(fd, ptr, nleft)) < 0) {
-         if(nwritten == -1) {
             if(errno == EINTR) continue;
-            return -1;
-         }
+            else return -1;
       } else if (nwritten == 0) break; 
       
       nleft -= nwritten;

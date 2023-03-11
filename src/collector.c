@@ -154,6 +154,8 @@ void server_run () {
                     
                 }
 
+                if(running == 0) break;
+
                 if(FD_ISSET(fd, &ready_sockets)) {
                     
                     // Caso 1: Nuova connessione in arrivo: 

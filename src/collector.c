@@ -38,11 +38,12 @@ void abrt_handler(int signum){  // In caso di errore fatale.
 void server_run ();
 
 int main(int argc, char * const argv[])
-{
+{   
     (void) argc;
     (void) argv;
 
     struct sigaction sa = {0}; 
+    struct sigaction abrt = {0};
 
     sigset_t mask = {0};
     
@@ -53,9 +54,9 @@ int main(int argc, char * const argv[])
     sa.sa_flags = SA_RESTART;
     sigaction(SIGUSR2, &sa, NULL);
 
-    // Per testare: 
-    sa.sa_handler = &abrt_handler;
-    sigaction(SIGABRT, &sa, NULL);
+    // Chiusura in caso di errore fatale:
+    abrt.sa_handler = &abrt_handler;
+    sigaction(SIGABRT, &abrt, NULL);
 
     
     // Maschera i segnali gestiti da Master-Worker.

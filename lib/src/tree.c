@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../include/tree.h"
 #include "../include/list_of_files.h"
@@ -30,8 +31,11 @@ tree * tree_add_node(tree * root, file * f) {
         else if(file_compare_elements(root->filelist->head->value, f) < 0){ 
             root->right = tree_add_node(root->right, f);
         } // a == b
-        else {
-            list_of_files_insert_file(root->filelist, f);
+        else {  // Controllo che i nomi siano diversi per evitare di inserire lo stesso file due volte.
+            if(strcmp(root->filelist->head->value->filename, f->filename) != 0) 
+                list_of_files_insert_file(root->filelist, f);
+            // Cancello il file che non sono riuscito ad inserire.
+            file_destroy(f);
             return root;
         }
 

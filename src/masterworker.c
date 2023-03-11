@@ -71,6 +71,8 @@ int main(int argc, char * const argv[])
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGHUP, &sa, NULL);
+    // Aggiungo anche CHLD
+    sigaction(SIGCHLD, &sa, NULL);
 
     // IGNORA (SIGPIPE)
     sa.sa_handler = &ignore_sigpipe;
@@ -109,6 +111,7 @@ int main(int argc, char * const argv[])
                 config->farm_setup_threads_number = strtol(optarg, NULL, 10);
 
                 if(config->farm_setup_threads_number <= 0 || errno == ERANGE) {
+
                     PRINT_USAGE_HELP
                     FATAL_ERROR
                     exit(EXIT_FAILURE);
@@ -120,6 +123,7 @@ int main(int argc, char * const argv[])
                 config->farm_setup_queue_length = strtol(optarg, NULL, 10);
                 
                 if(config->farm_setup_queue_length <= 0 || errno == ERANGE) {
+
                     PRINT_USAGE_HELP
                     FATAL_ERROR
                     exit(EXIT_FAILURE);
@@ -129,11 +133,17 @@ int main(int argc, char * const argv[])
 
             case 'd':
                 config->farm_setup_directory_name = strdup(optarg);
+                if(config->farm_setup_directory_name == NULL){
+                    PRINT_USAGE_HELP
+                    FATAL_ERROR
+                    exit(EXIT_FAILURE);
+                }
                 break;
 
             case 't':
                 config->farm_setup_delay_time = strtol(optarg, NULL, 10);
                 if(config->farm_setup_delay_time < 0 || errno == ERANGE) {
+
                     PRINT_USAGE_HELP
                     FATAL_ERROR
                     exit(EXIT_FAILURE);
@@ -146,6 +156,8 @@ int main(int argc, char * const argv[])
                 exit(EXIT_FAILURE);
         }
     }
+
+
 
     // Non ho cambiato i valori di default della qlen: 
     if(config->farm_setup_queue_length == -1 ) 
@@ -160,11 +172,11 @@ int main(int argc, char * const argv[])
     // Non ho cambiato i valori di default del delay: 
     if(config->farm_setup_delay_time   == -1 ) 
         config->farm_setup_delay_time = 0;
-
     // Non ho indicato alcuna directory: 
     if(config->farm_setup_directory_name == NULL) {
         if(argc - optind <= 0) {
             PRINT_USAGE_HELP
+            FATAL_ERROR
             exit(EXIT_FAILURE);
         }
     }
@@ -172,8 +184,7 @@ int main(int argc, char * const argv[])
         // Inserisce i file della directory nella lista di file da elaborare:
         recursive_file_walk_insert(config->farm_setup_directory_name, config->farm_setup_file_list);
 
-    }   
-
+    }  
     struct stat info = {0};
 
     // Gestione argomenti obbligatori (getopt() li ordina e li inserisce in coda. 
@@ -229,7 +240,6 @@ void cleanup() {
 
     int status = 0;  
     int wpid;
-
 
     // Faccio pulizia: 
     queue_empty(&feed_queue);

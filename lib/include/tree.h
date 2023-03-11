@@ -1,11 +1,11 @@
 #ifndef _TREE_FARM_
 #define _TREE_FARM_
 
-#include "./file.h"
+#include "./list_of_files.h"
 
 typedef struct tree
 {
-    file * f;
+    list_f * filelist;
     struct tree * left;
     struct tree * right;
 

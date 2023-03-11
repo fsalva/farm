@@ -50,13 +50,7 @@ test: all
 	- cp bin/* .
 	- chmod +x test.sh && ./test.sh
 
-
-
-usr1test: all
-	- cp bin/* .
-	- chmod +x testUSR1.sh && ./testUSR1.sh
-
 prepare: 
 	- mkdir obj bin tmp lib/obj
 
-.PHONY: all clean push valgrind test prepare usr1test
+.PHONY: all clean push valgrind test prepare 

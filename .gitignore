@@ -4,3 +4,4 @@ vgcore.*
 .vscode/
 .a
 filetest/
+test*

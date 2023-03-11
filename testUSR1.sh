@@ -81,4 +81,6 @@ kill -SIGQUIT $pid
 
 wait $pid
 
-grep -Pvc '\S' output.txt
+gestiti=$(grep -Pvc '\S' output.txt)
+
+echo Gestiti $gestiti/25 segnali.

@@ -62,16 +62,7 @@ int     list_empty( list * l) {
     return l->head == NULL ? 1 : 0;
 }
 
-void    list_print(list * l) {
-    
-    list_node *node = l->head;
-    
-    while (node != NULL) {
-        printf("%s ", node->value);
-        node = node->next;
-    }
-    printf("\n");
-}
+
 
 void list_destroy(list * l)
 {  

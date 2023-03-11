@@ -1,6 +1,8 @@
 #ifndef _FILE_FARM_
 #define _FILE_FARM_
 
+#include "./list.h"
+
 typedef struct file
 {
     char *  filename;

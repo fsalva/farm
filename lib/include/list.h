@@ -24,7 +24,6 @@ void    list_init(list *l);
 int     list_insert(list *l, char * filename);
 char *  list_remove_first(list *l);
 int     list_empty( list * l);
-void    list_print(list * l);
 void    list_destroy(list * l);
 
 

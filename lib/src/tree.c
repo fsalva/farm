@@ -2,15 +2,19 @@
 #include <stdlib.h>
 
 #include "../include/tree.h"
-#include "../include/file.h"
+#include "../include/list_of_files.h"
 
 tree * tree_add_node(tree * root, file * f) {
 
     if(root == NULL) {
         
         root = malloc(sizeof(tree));
+        
+        root->filelist = malloc(sizeof(list_f));
+        
+        list_of_files_init(root->filelist);
 
-        root->f = f;
+        list_of_files_insert_file(root->filelist, f);
 
         root->left = NULL;
     
@@ -18,18 +22,17 @@ tree * tree_add_node(tree * root, file * f) {
 
     }
     else {
-    
-        if(file_compare_elements(root->f, f) > 0 ){
-
+        
+        // a > b 
+        if(file_compare_elements(root->filelist->head->value, f) > 0) {
             root->left = tree_add_node(root->left, f);
-        }
-        else if(file_compare_elements(root->f, f) < 0){ 
+        } // a < b
+        else if(file_compare_elements(root->filelist->head->value, f) < 0){ 
             root->right = tree_add_node(root->right, f);
-        } 
-
+        } // a == b
         else {
-            free(f->filename);
-            free(f);
+            list_of_files_insert_file(root->filelist, f);
+            return root;
         }
 
     }        
@@ -43,7 +46,8 @@ void tree_print(tree * root) {
         if(root->left != NULL) {
             tree_print(root->left);
         }
-        fprintf(stdout, "%ld %s\n", (root->f)->result, root->f->filename);
+
+        list_of_files_print(root->filelist);
 
         if(root->right != NULL){
             tree_print(root->right);
@@ -58,8 +62,8 @@ void tree_destroy(tree * root){
         tree_destroy( root->left );
         tree_destroy( root->right );
         
-        file_destroy(root->f);
-
+        list_of_files_destroy(root->filelist);
+        free(root->filelist);
         free( root );
         root = NULL;
     }

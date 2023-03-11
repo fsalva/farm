@@ -195,7 +195,7 @@ int main(int argc, char * const argv[])
         free(file);         
 
     }
-
+    
     // Se non ho indicato il numero di threads: 
     if(config->farm_setup_threads_number == -1 ) 
         config->farm_setup_threads_number = 4;    

@@ -28,6 +28,7 @@ int             pid_child = -1;
 int             fatal_error = 0;
 volatile sig_atomic_t    master_running = 1;
 
+
 void recursive_file_walk_insert(char * dirname, list * l);
 
 
@@ -245,6 +246,7 @@ void cleanup() {
     while ((wpid = waitpid(pid_child, &status, 0)) > 0)
     {
     }
+
 }
 
 /**

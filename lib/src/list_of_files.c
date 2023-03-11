@@ -66,7 +66,7 @@ void list_of_files_print(list_f * l) {
     list_f_node *node = l->head;
     
     while (node != NULL) {
-        fprintf(stdout, "%ld %s", node->value->result, node->value->filename);
+        fprintf(stdout, "%ld %s\n", node->value->result, node->value->filename);
         node = node->next;
     }
     printf("\n");
